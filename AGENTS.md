@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+## Architecture decisions
+- Keep the Wave 1 Convarg prototype in a focused feature module mounted by the root index route, with sample data and local interactions until real service integrations are available; this keeps the preview runnable without inventing backend behavior.
