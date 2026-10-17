@@ -237,7 +237,6 @@ const navGroups: {
     label: "WORKSPACE",
     items: [
       { label: "Home", icon: Home, view: "home" as View },
-      { label: "Notifications", icon: Bell, view: "notifications" as View, badge: "3" },
     ],
   },
   {
@@ -1173,18 +1172,67 @@ function Workspace() {
             >
               <Search className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Notifications"
-              className="relative"
-              onClick={() => setView("notifications")}
-            >
-              <Bell className="h-[18px] w-[18px]" />
-              {unreadCount > 0 && (
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
-              )}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
+                  <Bell className="h-[18px] w-[18px]" />
+                  {unreadCount > 0 && (
+                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[360px] p-0">
+                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                  <div>
+                    <p className="text-sm font-semibold">Notifications</p>
+                    <p className="text-xs text-muted-foreground">
+                      {unreadCount ? `${unreadCount} unread updates` : "You’re all caught up"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={!unreadCount}
+                    onClick={() => setNotifications(notifications.map((item) => ({ ...item, unread: false })))}
+                  >
+                    Mark all read
+                  </Button>
+                </div>
+                <div className="max-h-[340px] overflow-y-auto">
+                  {notifications.slice(0, 4).map((item) => {
+                    const ItemIcon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        className="flex w-full gap-3 border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted/50"
+                        onClick={() => {
+                          setNotifications(notifications.map((notification) => notification.id === item.id ? { ...notification, unread: false } : notification));
+                          if (item.type === "Invoice") setView("invoices");
+                        }}
+                      >
+                        <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center bg-muted/60 ${item.color}`}>
+                          <ItemIcon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-start gap-2">
+                            <span className={`text-xs leading-5 ${item.unread ? "font-semibold" : "font-medium"}`}>{item.title}</span>
+                            {item.unread && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{item.detail}</span>
+                          <span className="mt-1 block text-[10px] text-muted-foreground">{item.time}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-border px-4 py-2">
+                  <button className="w-full py-1 text-center text-xs font-medium text-primary hover:underline" onClick={() => setView("home")}>
+                    See all activity on your home
+                  </button>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <span className="hidden h-6 border-l border-border sm:block" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1401,7 +1449,7 @@ function HomeView({
               <h2 className="text-sm font-semibold">Recent activity</h2>
               <p className="mt-1 text-xs text-muted-foreground">The latest across your workspace</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setView("notifications")}>
+            <Button variant="ghost" size="sm" onClick={() => toast("Your latest activity is shown below.")}>
               View all
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
@@ -1528,9 +1576,9 @@ function HomeView({
           variant="link"
           size="sm"
           className="h-auto px-0"
-          onClick={() => setView("notifications")}
+          onClick={() => toast("Your latest activity is shown above.")}
         >
-          Open notifications
+          Review activity
           <ArrowRight className="h-3.5 w-3.5" />
         </Button>
       </section>
