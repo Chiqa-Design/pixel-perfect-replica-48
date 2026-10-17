@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowDownRight,
   ArrowLeft,
@@ -271,10 +271,33 @@ function Brand({ compact = false }: { compact?: boolean }) {
 
 function AuthScreen({ onComplete }: { onComplete: () => void }) {
   const [mode, setMode] = useState<AuthView>("signin");
+  useEffect(() => {
+    let active = true;
+    if (!supabase) {
+      return () => {
+        active = false;
+      };
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (active && data.session) onComplete();
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (active && (event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+        onComplete();
+      }
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [onComplete]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
   const submit = async () => {
     if (!email.includes("@") || (mode !== "forgot" && password.length < 6)) {
       toast.error("Enter a valid email and a password with at least 6 characters.");
@@ -285,11 +308,13 @@ function AuthScreen({ onComplete }: { onComplete: () => void }) {
       return;
     }
     if (mode === "signin") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (error) {
-        toast.error(error.message.toLowerCase().includes("email not confirmed")
-          ? "Please confirm your email before signing in."
-          : "Invalid email or password.");
+        toast.error(
+          error.message.toLowerCase().includes("email not confirmed")
+            ? "Please confirm your email before signing in."
+            : "Invalid email or password.",
+        );
         return;
       }
       onComplete();
@@ -297,7 +322,7 @@ function AuthScreen({ onComplete }: { onComplete: () => void }) {
     }
     if (mode === "register") {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           emailRedirectTo:
@@ -307,9 +332,11 @@ function AuthScreen({ onComplete }: { onComplete: () => void }) {
         },
       });
       if (error) {
-        toast.error(error.message.toLowerCase().includes("password")
-          ? error.message
-          : "We couldn’t create your account. Check your details and try again.");
+        toast.error(
+          error.message.toLowerCase().includes("password")
+            ? error.message
+            : "We couldn’t create your account. Check your details and try again.",
+        );
         return;
       }
       if (data.session) onComplete();
@@ -317,7 +344,7 @@ function AuthScreen({ onComplete }: { onComplete: () => void }) {
       return;
     }
     if (mode === "forgot") {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${window.location.origin}/auth/callback`,
       });
       if (error) {
@@ -332,12 +359,9 @@ function AuthScreen({ onComplete }: { onComplete: () => void }) {
       const { data } = await supabase.auth.getSession();
       if (data.session) onComplete();
       else toast.error("Please confirm your email, then try again.");
-      return;
-    }
-    if (mode === "mfa" || mode === "enrol") {
-      toast.error("Multi-factor authentication is not enabled for this account.");
     }
   };
+
   const isSignup = mode === "register";
   const headline =
     mode === "signin"

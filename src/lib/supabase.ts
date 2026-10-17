@@ -7,5 +7,4 @@ const supabaseKey =
   import.meta.env["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"] ??
   import.meta.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"];
 
-export const supabase =
-  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+export const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
