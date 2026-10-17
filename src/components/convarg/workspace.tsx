@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowDownRight,
   ArrowLeft,
@@ -52,114 +52,687 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 type View = "home" | "notifications" | "preferences" | "invoices" | "contacts";
 type AuthView = "signin" | "register" | "forgot" | "verify" | "mfa" | "enrol";
 type SetupDimension = "industry" | "charge" | "team" | "offer" | "channels" | "size";
 
-const setupSteps: { key: SetupDimension; title: string; description: string; options: string[] }[] = [
-  { key: "industry", title: "What industry are you in?", description: "We’ll tailor your workspace to the work you do.", options: ["Agriculture", "Construction", "Education", "Financial services", "Healthcare", "Logistics", "Manufacturing", "Professional services", "Retail & commerce", "Technology"] },
-  { key: "charge", title: "How do you earn revenue?", description: "Choose every way customers pay you.", options: ["Sell products", "Provide a service", "Recurring subscriptions", "Project-based work", "Commissions", "Grants or donations"] },
-  { key: "team", title: "What does your team do?", description: "We’ll put the right building blocks within reach.", options: ["Sales", "Operations", "Finance", "Customer support", "Marketing", "People & HR", "Product & engineering", "Field services"] },
-  { key: "offer", title: "What do you sell?", description: "Add the products or services you want to keep track of.", options: ["Physical products", "Digital products", "Consulting", "Delivery & logistics", "Subscriptions", "Custom orders"] },
-  { key: "channels", title: "Where do you talk to customers?", description: "Bring the conversations that matter into one place.", options: ["Email", "Phone", "WhatsApp", "Instagram", "In person", "Website"] },
-  { key: "size", title: "How big is your team?", description: "This helps us set up the right starting point.", options: ["Just me", "2–5 people", "6–20 people", "21–50 people", "51–200 people", "201+ people"] },
-];
+const setupSteps: { key: SetupDimension; title: string; description: string; options: string[] }[] =
+  [
+    {
+      key: "industry",
+      title: "What industry are you in?",
+      description: "We’ll tailor your workspace to the work you do.",
+      options: [
+        "Agriculture",
+        "Construction",
+        "Education",
+        "Financial services",
+        "Healthcare",
+        "Logistics",
+        "Manufacturing",
+        "Professional services",
+        "Retail & commerce",
+        "Technology",
+      ],
+    },
+    {
+      key: "charge",
+      title: "How do you earn revenue?",
+      description: "Choose every way customers pay you.",
+      options: [
+        "Sell products",
+        "Provide a service",
+        "Recurring subscriptions",
+        "Project-based work",
+        "Commissions",
+        "Grants or donations",
+      ],
+    },
+    {
+      key: "team",
+      title: "What does your team do?",
+      description: "We’ll put the right building blocks within reach.",
+      options: [
+        "Sales",
+        "Operations",
+        "Finance",
+        "Customer support",
+        "Marketing",
+        "People & HR",
+        "Product & engineering",
+        "Field services",
+      ],
+    },
+    {
+      key: "offer",
+      title: "What do you sell?",
+      description: "Add the products or services you want to keep track of.",
+      options: [
+        "Physical products",
+        "Digital products",
+        "Consulting",
+        "Delivery & logistics",
+        "Subscriptions",
+        "Custom orders",
+      ],
+    },
+    {
+      key: "channels",
+      title: "Where do you talk to customers?",
+      description: "Bring the conversations that matter into one place.",
+      options: ["Email", "Phone", "WhatsApp", "Instagram", "In person", "Website"],
+    },
+    {
+      key: "size",
+      title: "How big is your team?",
+      description: "This helps us set up the right starting point.",
+      options: [
+        "Just me",
+        "2–5 people",
+        "6–20 people",
+        "21–50 people",
+        "51–200 people",
+        "201+ people",
+      ],
+    },
+  ];
 
 const notificationSeed = [
-  { id: 1, type: "Approval", title: "Purchase request is ready for review", detail: "Office equipment · raised by Amara Okafor", time: "12 min ago", icon: CheckCircle2, color: "text-info", unread: true },
-  { id: 2, type: "Invoice", title: "Invoice INV-0028 was paid", detail: "Northstar Logistics · ₦840,000.00", time: "1 hour ago", icon: WalletCards, color: "text-success", unread: true },
-  { id: 3, type: "Workspace", title: "Your workspace is ready to explore", detail: "Your operations and customer records are set up.", time: "3 hours ago", icon: Sparkles, color: "text-primary", unread: true },
-  { id: 4, type: "Team", title: "Chidi joined your workspace", detail: "Chidi Nwosu accepted your invitation.", time: "Yesterday", icon: Users, color: "text-info", unread: false },
-  { id: 5, type: "Security", title: "A new sign-in from this device", detail: "Lagos, Nigeria · Chrome on macOS", time: "Yesterday", icon: ShieldCheck, color: "text-success", unread: false },
-  { id: 6, type: "Reminder", title: "Invoice INV-0026 is due tomorrow", detail: "Kora Foods · ₦325,000.00", time: "2 days ago", icon: Clock3, color: "text-warning", unread: false },
+  {
+    id: 1,
+    type: "Approval",
+    title: "Purchase request is ready for review",
+    detail: "Office equipment · raised by Amara Okafor",
+    time: "12 min ago",
+    icon: CheckCircle2,
+    color: "text-info",
+    unread: true,
+  },
+  {
+    id: 2,
+    type: "Invoice",
+    title: "Invoice INV-0028 was paid",
+    detail: "Northstar Logistics · ₦840,000.00",
+    time: "1 hour ago",
+    icon: WalletCards,
+    color: "text-success",
+    unread: true,
+  },
+  {
+    id: 3,
+    type: "Workspace",
+    title: "Your workspace is ready to explore",
+    detail: "Your operations and customer records are set up.",
+    time: "3 hours ago",
+    icon: Sparkles,
+    color: "text-primary",
+    unread: true,
+  },
+  {
+    id: 4,
+    type: "Team",
+    title: "Chidi joined your workspace",
+    detail: "Chidi Nwosu accepted your invitation.",
+    time: "Yesterday",
+    icon: Users,
+    color: "text-info",
+    unread: false,
+  },
+  {
+    id: 5,
+    type: "Security",
+    title: "A new sign-in from this device",
+    detail: "Lagos, Nigeria · Chrome on macOS",
+    time: "Yesterday",
+    icon: ShieldCheck,
+    color: "text-success",
+    unread: false,
+  },
+  {
+    id: 6,
+    type: "Reminder",
+    title: "Invoice INV-0026 is due tomorrow",
+    detail: "Kora Foods · ₦325,000.00",
+    time: "2 days ago",
+    icon: Clock3,
+    color: "text-warning",
+    unread: false,
+  },
 ];
 
 const activities = [
-  { icon: WalletCards, title: "Payment received", detail: "Northstar Logistics paid invoice INV-0028", time: "10:42 am", color: "text-success", mark: "+₦840,000" },
-  { icon: Users, title: "New team member", detail: "Chidi Nwosu joined your workspace", time: "9:16 am", color: "text-info", mark: "Team" },
-  { icon: FileText, title: "Invoice sent", detail: "INV-0028 was sent to Northstar Logistics", time: "Yesterday", color: "text-primary", mark: "Sent" },
+  {
+    icon: WalletCards,
+    title: "Payment received",
+    detail: "Northstar Logistics paid invoice INV-0028",
+    time: "10:42 am",
+    color: "text-success",
+    mark: "+₦840,000",
+  },
+  {
+    icon: Users,
+    title: "New team member",
+    detail: "Chidi Nwosu joined your workspace",
+    time: "9:16 am",
+    color: "text-info",
+    mark: "Team",
+  },
+  {
+    icon: FileText,
+    title: "Invoice sent",
+    detail: "INV-0028 was sent to Northstar Logistics",
+    time: "Yesterday",
+    color: "text-primary",
+    mark: "Sent",
+  },
 ];
 
-const navGroups: { label: string; items: { label: string; icon: LucideIcon; view: View; badge?: string; locked?: boolean }[] }[] = [
-  { label: "WORKSPACE", items: [{ label: "Home", icon: Home, view: "home" as View }, { label: "Notifications", icon: Bell, view: "notifications" as View, badge: "3" }] },
-  { label: "YOUR APPS", items: [{ label: "VargBooks", icon: WalletCards, view: "invoices" as View }, { label: "Directory", icon: Users, view: "contacts" as View }, { label: "VargFlow", icon: Layers3, view: "home" as View, locked: true }, { label: "VargDesk", icon: LifeBuoy, view: "home" as View, locked: true }] },
+const navGroups: {
+  label: string;
+  items: { label: string; icon: LucideIcon; view: View; badge?: string; locked?: boolean }[];
+}[] = [
+  {
+    label: "WORKSPACE",
+    items: [
+      { label: "Home", icon: Home, view: "home" as View },
+    ],
+  },
+  {
+    label: "YOUR APPS",
+    items: [
+      { label: "VargBooks", icon: WalletCards, view: "invoices" as View },
+      { label: "Directory", icon: Users, view: "contacts" as View },
+      { label: "VargFlow", icon: Layers3, view: "home" as View, locked: true },
+      { label: "VargDesk", icon: LifeBuoy, view: "home" as View, locked: true },
+    ],
+  },
 ];
 
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></span>
-      {!compact && <span className="font-display text-[20px] font-bold tracking-[0] text-foreground">convarg</span>}
+      <span className="brand-mark" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+      </span>
+      {!compact && (
+        <span className="font-display text-[20px] font-bold tracking-[0] text-foreground">
+          convarg
+        </span>
+      )}
     </div>
   );
 }
 
-function AuthScreen({ onComplete }: { onComplete: () => void }) {
+function AuthScreen({
+  onComplete,
+  onPreview,
+}: {
+  onComplete: () => void;
+  onPreview: () => void;
+}) {
   const [mode, setMode] = useState<AuthView>("signin");
+  useEffect(() => {
+    let active = true;
+    if (!supabase) {
+      return () => {
+        active = false;
+      };
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (active && data.session) onComplete();
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (active && (event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+        onComplete();
+      }
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [onComplete]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const submit = () => {
-    if (mode === "signin" && (!email.includes("@") || password.length < 6)) {
-      toast.error("Enter a valid email and a password with at least 6 characters."); return;
+
+  const submit = async () => {
+    if (!email.includes("@") || (mode !== "forgot" && password.length < 6)) {
+      toast.error("Enter a valid email and a password with at least 6 characters.");
+      return;
     }
-    if (mode === "register" && (!email.includes("@") || password.length < 6)) {
-      toast.error("Add a valid email and a password with at least 6 characters."); return;
+    if (!supabase) {
+      toast.error("Authentication is not configured for this preview.");
+      return;
     }
-    if (mode === "signin") { setMode("mfa"); return; }
-    if (mode === "register") { setMode("verify"); return; }
-    if (mode === "verify") { onComplete(); return; }
-    if (mode === "mfa") { if (otp.length !== 6) { toast.error("Enter all six digits to continue."); return; } onComplete(); return; }
-    if (mode === "forgot") { toast.success("If there’s an account for this email, a reset link is on its way."); setMode("signin"); return; }
-    if (mode === "enrol") { toast.success("Authenticator set up. Recovery codes saved."); onComplete(); }
+    if (mode === "signin") {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) {
+        toast.error(
+          error.message.toLowerCase().includes("email not confirmed")
+            ? "Please confirm your email before signing in."
+            : "Invalid email or password.",
+        );
+        return;
+      }
+      onComplete();
+      return;
+    }
+    if (mode === "register") {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo:
+            import.meta.env["VITE_SUPABASE_REDIRECT_URL"] ??
+            import.meta.env["NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL"] ??
+            `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        toast.error(
+          error.message.toLowerCase().includes("password")
+            ? error.message
+            : "We couldn’t create your account. Check your details and try again.",
+        );
+        return;
+      }
+      if (data.session) onComplete();
+      else setMode("verify");
+      return;
+    }
+    if (mode === "forgot") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      });
+      if (error) {
+        toast.error("We couldn’t send the reset link. Please try again.");
+        return;
+      }
+      toast.success("If there’s an account for this email, a reset link is on its way.");
+      setMode("signin");
+      return;
+    }
+    if (mode === "verify") {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) onComplete();
+      else toast.error("Please confirm your email, then try again.");
+    }
   };
+
   const isSignup = mode === "register";
-  const headline = mode === "signin" ? "Good to have you back." : mode === "register" ? "Let’s build your workspace." : mode === "forgot" ? "Reset your password." : mode === "mfa" ? "One more step." : mode === "enrol" ? "Secure your account." : "Check your inbox.";
-  const subhead = mode === "signin" ? "Sign in to get back to the work that moves you forward." : mode === "register" ? "One account for your team, customers and everyday work." : mode === "forgot" ? "We’ll send a secure link to your email address." : mode === "mfa" ? "Enter the six-digit code from your authenticator app." : mode === "enrol" ? "Add an extra layer of security with an authenticator app." : `We sent a verification link to ${email || "your email"}.`;
+  const headline =
+    mode === "signin"
+      ? "Good to have you back."
+      : mode === "register"
+        ? "Let’s build your workspace."
+        : mode === "forgot"
+          ? "Reset your password."
+          : mode === "mfa"
+            ? "One more step."
+            : mode === "enrol"
+              ? "Secure your account."
+              : "Check your inbox.";
+  const subhead =
+    mode === "signin"
+      ? "Sign in to open your workspace. For this prototype, you can also explore the home screen instantly."
+      : mode === "register"
+        ? "One account for your team, customers and everyday work."
+        : mode === "forgot"
+          ? "We’ll send a secure link to your email address."
+          : mode === "mfa"
+            ? "Enter the six-digit code from your authenticator app."
+            : mode === "enrol"
+              ? "Add an extra layer of security with an authenticator app."
+              : `We sent a verification link to ${email || "your email"}.`;
   return (
     <main className="auth-screen min-h-screen bg-background">
       <div className="auth-topbar flex items-center justify-between px-6 py-5 sm:px-10">
         <Brand />
-        <div className="flex items-center gap-2 text-sm text-muted-foreground"><CircleHelp className="h-4 w-4"/><span className="hidden sm:inline">Need a hand?</span><Button variant="ghost" size="sm" onClick={() => toast("Help is available at support@convarg.com")}>Talk to us</Button></div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <CircleHelp className="h-4 w-4" />
+          <span className="hidden sm:inline">Need a hand?</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => toast("Help is available at support@convarg.com")}
+          >
+            Talk to us
+          </Button>
+        </div>
       </div>
       <div className="auth-layout mx-auto grid min-h-[calc(100svh-80px)] max-w-[1280px] items-center gap-12 px-6 pb-10 pt-5 sm:px-10 lg:grid-cols-[1fr_440px] lg:gap-24 lg:px-20">
         <section className="auth-story hidden max-w-[560px] lg:block">
-          <div className="mb-7 flex items-center gap-2"><span className="eyebrow-mark"/><span className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">A better way to work</span></div>
-          <h1 className="font-display max-w-[520px] text-[54px] font-semibold leading-[1.07] tracking-[0] text-foreground">Your business, <span className="text-primary">moving as one.</span></h1>
-          <p className="mt-6 max-w-[430px] text-[17px] leading-7 text-muted-foreground">One home for the people, processes and possibilities that keep your business growing.</p>
-          <div className="varg-promise mt-11 grid max-w-[500px] grid-cols-2 gap-x-8 gap-y-5 border-t border-border pt-7">{["Velocity", "Automation", "Reliability", "Growth"].map((word, i) => <div key={word} className="flex items-center gap-3"><span className={`varg-letter varg-letter-${i}`}>{word[0]}</span><span className="text-sm font-medium text-foreground">{word}</span></div>)}</div>
-          <div className="mt-10 flex items-center gap-3 text-sm text-muted-foreground"><span className="flex -space-x-2"><span className="avatar-dot avatar-dot-one">A</span><span className="avatar-dot avatar-dot-two">C</span><span className="avatar-dot avatar-dot-three">M</span></span><span>Made for the people building what’s next.</span></div>
+          <div className="mb-7 flex items-center gap-2">
+            <span className="eyebrow-mark" />
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+              A better way to work
+            </span>
+          </div>
+          <h1 className="font-display max-w-[520px] text-[54px] font-semibold leading-[1.07] tracking-[0] text-foreground">
+            Your business, <span className="text-primary">moving as one.</span>
+          </h1>
+          <p className="mt-6 max-w-[430px] text-[17px] leading-7 text-muted-foreground">
+            One home for the people, processes and possibilities that keep your business growing.
+          </p>
+          <div className="varg-promise mt-11 grid max-w-[500px] grid-cols-2 gap-x-8 gap-y-5 border-t border-border pt-7">
+            {["Velocity", "Automation", "Reliability", "Growth"].map((word, i) => (
+              <div key={word} className="flex items-center gap-3">
+                <span className={`varg-letter varg-letter-${i}`}>{word[0]}</span>
+                <span className="text-sm font-medium text-foreground">{word}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 flex items-center gap-3 text-sm text-muted-foreground">
+            <span className="flex -space-x-2">
+              <span className="avatar-dot avatar-dot-one">A</span>
+              <span className="avatar-dot avatar-dot-two">C</span>
+              <span className="avatar-dot avatar-dot-three">M</span>
+            </span>
+            <span>Made for the people building what’s next.</span>
+          </div>
         </section>
         <section className="auth-form-wrap mx-auto w-full max-w-[420px]">
-          <div className="mb-7 lg:hidden"><div className="mb-6 flex items-center gap-2"><span className="eyebrow-mark"/><span className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">A better way to work</span></div><h1 className="font-display text-[40px] font-semibold leading-[1.08] text-foreground">Your business, <span className="text-primary">moving as one.</span></h1><p className="mt-3 text-sm leading-6 text-muted-foreground">One home for your people, processes and possibilities.</p></div>
-          <div className="border border-border bg-card px-6 py-7 shadow-sm sm:px-8 sm:py-8">
-            <div className="mb-6"><h2 className="font-display text-[26px] font-semibold text-foreground">{headline}</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">{subhead}</p></div>
-            {mode === "signin" || mode === "register" || mode === "forgot" ? <div className="space-y-4">
-              {mode !== "forgot" && mode !== "signin" && <div><label className="mb-1.5 block text-sm font-medium" htmlFor="workspace-name">Business name</label><Input id="workspace-name" placeholder="Your business" autoComplete="organization" /></div>}
-              <div><label className="mb-1.5 block text-sm font-medium" htmlFor="auth-email">Work email</label><Input id="auth-email" autoComplete="email" type="email" placeholder="you@company.com" value={email} onChange={(event) => setEmail(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submit(); }}/></div>
-              {mode !== "forgot" && <div><div className="mb-1.5 flex items-center justify-between"><label className="text-sm font-medium" htmlFor="auth-password">Password</label>{mode === "signin" && <button className="text-xs font-medium text-primary hover:underline" onClick={() => setMode("forgot")}>Forgot password?</button>}</div><div className="relative"><Input id="auth-password" type={showPassword ? "text" : "password"} autoComplete={isSignup ? "new-password" : "current-password"} placeholder="At least 6 characters" value={password} onChange={(event) => setPassword(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submit(); }}/><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((value) => !value)} className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center text-muted-foreground"><span className="sr-only">{showPassword ? "Hide" : "Show"}</span><EyeIcon open={showPassword}/></button></div>{isSignup && <p className="mt-1.5 text-xs text-muted-foreground">Use 8 or more characters for a stronger password.</p>}</div>}
-              <Button className="mt-1 h-11 w-full" onClick={submit}>{mode === "forgot" ? "Send reset link" : isSignup ? "Create your account" : "Sign in"}<ArrowRight className="h-4 w-4"/></Button>
-              <div className="relative py-1 text-center text-xs text-muted-foreground"><span className="relative z-10 bg-card px-3">or continue with</span><span className="absolute left-0 right-0 top-1/2 border-t border-border"/></div>
-              <div className="grid grid-cols-2 gap-3"><Button variant="outline" className="h-10" onClick={() => toast("Google sign-in will be available when connected.")}><GoogleMark/>Google</Button><Button variant="outline" className="h-10" onClick={() => toast("To sign in with your organisation, enter your work email first.")}><Building2 className="h-4 w-4"/>Work SSO</Button></div>
-              {mode === "signin" && <p className="text-center text-xs leading-5 text-muted-foreground">By continuing, you agree to our <button className="font-medium text-foreground underline underline-offset-2" onClick={() => toast("Terms of service")}>Terms</button> and <button className="font-medium text-foreground underline underline-offset-2" onClick={() => toast("Privacy policy")}>Privacy policy</button>.</p>}
-              {mode === "forgot" && <Button className="w-full" variant="ghost" onClick={() => setMode("signin")}><ArrowLeft className="h-4 w-4"/>Back to sign in</Button>}
-            </div> : mode === "mfa" ? <div className="space-y-5"><div className="flex gap-2" aria-label="Six-digit verification code">{Array.from({length: 6}, (_, i) => <input key={i} aria-label={`Digit ${i+1}`} inputMode="numeric" maxLength={1} value={otp[i] ?? ""} onChange={(e) => setOtp((old) => { const chars = old.split(""); chars[i] = e.target.value.replace(/\D/g, ""); return chars.join("").slice(0,6); })} className="h-12 min-w-0 flex-1 border border-input bg-background text-center font-mono text-lg focus:outline-none focus:ring-2 focus:ring-ring"/> )}</div><Button className="h-11 w-full" onClick={submit}>Verify and sign in<ArrowRight className="h-4 w-4"/></Button><Button variant="ghost" className="w-full" onClick={() => setMode("signin")}><ArrowLeft className="h-4 w-4"/>Back to sign in</Button></div> : mode === "enrol" ? <div className="space-y-4"><div className="qr-art mx-auto grid aspect-square w-36 place-items-center border border-border bg-background"><div className="qr-grid"><span/><span/><span/><span/><span/><span/><span/><span/><span/></div></div><p className="text-center text-sm text-muted-foreground">Scan this code with your authenticator app, then enter the code to confirm.</p><Input aria-label="Authenticator code" inputMode="numeric" placeholder="6-digit code" value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0,6))}/><Button className="w-full" onClick={submit}>Confirm setup</Button></div> : <div className="space-y-5"><div className="rounded-sm border border-success/30 bg-success/10 p-4 text-sm leading-6"><span className="font-semibold text-success">Almost there.</span> Use the link in your email to verify your address and continue setting up your workspace.</div><Button className="w-full" onClick={submit}>I’ve verified my email<ArrowRight className="h-4 w-4"/></Button><Button variant="ghost" className="w-full" onClick={() => toast.success("A new verification link has been sent.")}>Resend verification email</Button><button className="w-full text-xs text-muted-foreground hover:text-foreground" onClick={() => setMode("signin")}>Back to sign in</button></div>}
-            {mode !== "verify" && mode !== "mfa" && mode !== "enrol" && mode !== "forgot" && <p className="mt-6 text-center text-sm text-muted-foreground">{isSignup ? "Already have an account?" : "New to Convarg?"} <button className="font-semibold text-primary hover:underline" onClick={() => setMode(isSignup ? "signin" : "register")}>{isSignup ? "Sign in" : "Create an account"}</button></p>}
+          <div className="mb-7 lg:hidden">
+            <div className="mb-6 flex items-center gap-2">
+              <span className="eyebrow-mark" />
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                A better way to work
+              </span>
+            </div>
+            <h1 className="font-display text-[40px] font-semibold leading-[1.08] text-foreground">
+              Your business, <span className="text-primary">moving as one.</span>
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+              One home for your people, processes and possibilities.
+            </p>
           </div>
-          <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground"><LockKeyhole className="h-3.5 w-3.5"/>Your workspace is protected with secure encryption</div>
+          <div className="border border-border bg-card px-6 py-7 shadow-sm sm:px-8 sm:py-8">
+            <div className="mb-6">
+              <h2 className="font-display text-[26px] font-semibold text-foreground">{headline}</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{subhead}</p>
+            </div>
+            {mode === "signin" || mode === "register" || mode === "forgot" ? (
+              <div className="space-y-4">
+                {mode !== "forgot" && mode !== "signin" && (
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium" htmlFor="workspace-name">
+                      Business name
+                    </label>
+                    <Input
+                      id="workspace-name"
+                      placeholder="Your business"
+                      autoComplete="organization"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium" htmlFor="auth-email">
+                    Work email
+                  </label>
+                  <Input
+                    id="auth-email"
+                    autoComplete="email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === "Enter" &&
+                        !event.nativeEvent.isComposing &&
+                        event.keyCode !== 229
+                      )
+                        submit();
+                    }}
+                  />
+                </div>
+                {mode !== "forgot" && (
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <label className="text-sm font-medium" htmlFor="auth-password">
+                        Password
+                      </label>
+                      {mode === "signin" && (
+                        <button
+                          className="text-xs font-medium text-primary hover:underline"
+                          onClick={() => setMode("forgot")}
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="auth-password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete={isSignup ? "new-password" : "current-password"}
+                        placeholder="At least 6 characters"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (
+                            event.key === "Enter" &&
+                            !event.nativeEvent.isComposing &&
+                            event.keyCode !== 229
+                          )
+                            submit();
+                        }}
+                      />
+                      <button
+                        type="button"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        onClick={() => setShowPassword((value) => !value)}
+                        className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center text-muted-foreground"
+                      >
+                        <span className="sr-only">{showPassword ? "Hide" : "Show"}</span>
+                        <EyeIcon open={showPassword} />
+                      </button>
+                    </div>
+                    {isSignup && (
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        Use 8 or more characters for a stronger password.
+                      </p>
+                    )}
+                  </div>
+                )}
+                <Button className="mt-1 h-11 w-full" onClick={submit}>
+                  {mode === "forgot"
+                    ? "Send reset link"
+                    : isSignup
+                      ? "Create your account"
+                      : "Sign in"}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                {mode === "signin" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 w-full"
+                  onClick={onPreview}
+                >
+                  <Eye className="h-4 w-4" />
+                  Explore the home screen
+                </Button>
+                )}
+                <div className="relative py-1 text-center text-xs text-muted-foreground">
+                  <span className="relative z-10 bg-card px-3">or continue with</span>
+                  <span className="absolute left-0 right-0 top-1/2 border-t border-border" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    className="h-10"
+                    onClick={() => toast("Google sign-in will be available when connected.")}
+                  >
+                    <GoogleMark />
+                    Google
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-10"
+                    onClick={() =>
+                      toast("To sign in with your organisation, enter your work email first.")
+                    }
+                  >
+                    <Building2 className="h-4 w-4" />
+                    Work SSO
+                  </Button>
+                </div>
+                {mode === "signin" && (
+                  <p className="text-center text-xs leading-5 text-muted-foreground">
+                    By continuing, you agree to our{" "}
+                    <button
+                      className="font-medium text-foreground underline underline-offset-2"
+                      onClick={() => toast("Terms of service")}
+                    >
+                      Terms
+                    </button>{" "}
+                    and{" "}
+                    <button
+                      className="font-medium text-foreground underline underline-offset-2"
+                      onClick={() => toast("Privacy policy")}
+                    >
+                      Privacy policy
+                    </button>
+                    .
+                  </p>
+                )}
+                {mode === "forgot" && (
+                  <Button className="w-full" variant="ghost" onClick={() => setMode("signin")}>
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to sign in
+                  </Button>
+                )}
+              </div>
+            ) : mode === "mfa" ? (
+              <div className="space-y-5">
+                <div className="flex gap-2" aria-label="Six-digit verification code">
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <input
+                      key={i}
+                      aria-label={`Digit ${i + 1}`}
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={otp[i] ?? ""}
+                      onChange={(e) =>
+                        setOtp((old) => {
+                          const chars = old.split("");
+                          chars[i] = e.target.value.replace(/\D/g, "");
+                          return chars.join("").slice(0, 6);
+                        })
+                      }
+                      className="h-12 min-w-0 flex-1 border border-input bg-background text-center font-mono text-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  ))}
+                </div>
+                <Button className="h-11 w-full" onClick={submit}>
+                  Verify and sign in
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" className="w-full" onClick={() => setMode("signin")}>
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to sign in
+                </Button>
+              </div>
+            ) : mode === "enrol" ? (
+              <div className="space-y-4">
+                <div className="qr-art mx-auto grid aspect-square w-36 place-items-center border border-border bg-background">
+                  <div className="qr-grid">
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </div>
+                <p className="text-center text-sm text-muted-foreground">
+                  Scan this code with your authenticator app, then enter the code to confirm.
+                </p>
+                <Input
+                  aria-label="Authenticator code"
+                  inputMode="numeric"
+                  placeholder="6-digit code"
+                  value={otp}
+                  onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                />
+                <Button className="w-full" onClick={submit}>
+                  Confirm setup
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <div className="rounded-sm border border-success/30 bg-success/10 p-4 text-sm leading-6">
+                  <span className="font-semibold text-success">Almost there.</span> Use the link in
+                  your email to verify your address and continue setting up your workspace.
+                </div>
+                <Button className="w-full" onClick={submit}>
+                  I’ve verified my email
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => toast.success("A new verification link has been sent.")}
+                >
+                  Resend verification email
+                </Button>
+                <button
+                  className="w-full text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => setMode("signin")}
+                >
+                  Back to sign in
+                </button>
+              </div>
+            )}
+            {mode !== "verify" && mode !== "mfa" && mode !== "enrol" && mode !== "forgot" && (
+              <p className="mt-6 text-center text-sm text-muted-foreground">
+                {isSignup ? "Already have an account?" : "New to Convarg?"}{" "}
+                <button
+                  className="font-semibold text-primary hover:underline"
+                  onClick={() => setMode(isSignup ? "signin" : "register")}
+                >
+                  {isSignup ? "Sign in" : "Create an account"}
+                </button>
+              </p>
+            )}
+          </div>
+          <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <LockKeyhole className="h-3.5 w-3.5" />
+            Your workspace is protected with secure encryption
+          </div>
         </section>
       </div>
     </main>
   );
 }
 
-function EyeIcon({ open }: { open: boolean }) { return open ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>; }
+function EyeIcon({ open }: { open: boolean }) {
+  return open ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />;
+}
 
-function GoogleMark() { return <span className="font-display text-[17px] font-bold text-info">G</span>; }
+function GoogleMark() {
+  return <span className="font-display text-[17px] font-bold text-info">G</span>;
+}
 
-function SetupWizard({ onFinish, onSave }: { onFinish: () => void; onSave: (step: number) => void }) {
+function SetupWizard({
+  onFinish,
+  onSave,
+}: {
+  onFinish: () => void;
+  onSave: (step: number) => void;
+}) {
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState<Record<string, string[]>>({});
   const [other, setOther] = useState<Record<string, string>>({});
@@ -168,25 +741,267 @@ function SetupWizard({ onFinish, onSave }: { onFinish: () => void; onSave: (step
   const [assembling, setAssembling] = useState(false);
   const [assemblyProgress, setAssemblyProgress] = useState(0);
   const current = setupSteps[step];
-  const toggle = (option: string) => setSelected((values) => {
-    const existing = values[current.key] ?? [];
-    return { ...values, [current.key]: existing.includes(option) ? existing.filter((item) => item !== option) : [...existing, option] };
-  });
+  const toggle = (option: string) => {
+    if (!current) return;
+    setSelected((values) => {
+      const existing = values[current.key] ?? [];
+      return {
+        ...values,
+        [current.key]: existing.includes(option)
+          ? existing.filter((item) => item !== option)
+          : [...existing, option],
+      };
+    });
+  };
   const startAssembly = () => {
-    setAssembling(true); setAssemblyProgress(8);
-    const ticks = [24, 47, 72, 90, 100]; let tick = 0;
+    setAssembling(true);
+    setAssemblyProgress(8);
+    const ticks = [24, 47, 72, 90, 100];
+    let tick = 0;
     const timer = window.setInterval(() => {
-      tick += 1; setAssemblyProgress(ticks[tick - 1] ?? 100);
-      if (tick >= ticks.length) { window.clearInterval(timer); window.setTimeout(onFinish, 500); }
+      tick += 1;
+      setAssemblyProgress(ticks[tick - 1] ?? 100);
+      if (tick >= ticks.length) {
+        window.clearInterval(timer);
+        window.setTimeout(onFinish, 500);
+      }
     }, 550);
   };
   if (!current) return null;
   return (
     <div className="setup-shell min-h-screen bg-background">
-      <header className="setup-topbar flex h-[68px] items-center justify-between border-b border-border bg-background px-5 sm:px-8"><Brand/><button onClick={() => { onSave(step); toast("Your progress is saved. You can come back whenever you’re ready."); }} className="flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><span className="hidden sm:inline">Your progress is saved automatically</span><span className="sm:hidden">Save for later</span><X className="h-4 w-4"/></button></header>
+      <header className="setup-topbar flex h-[68px] items-center justify-between border-b border-border bg-background px-5 sm:px-8">
+        <Brand />
+        <button
+          onClick={() => {
+            onSave(step);
+            toast("Your progress is saved. You can come back whenever you’re ready.");
+          }}
+          className="flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <span className="hidden sm:inline">Your progress is saved automatically</span>
+          <span className="sm:hidden">Save for later</span>
+          <X className="h-4 w-4" />
+        </button>
+      </header>
       <main className="mx-auto max-w-[1100px] px-5 pb-14 pt-8 sm:px-8 sm:pt-12">
-        <div className="setup-intro mb-8 flex flex-col justify-between gap-5 sm:mb-10 sm:flex-row sm:items-end"><div><span className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary"><Sparkles className="h-4 w-4"/>A workspace that fits you</span><h1 className="font-display text-[32px] font-semibold leading-tight sm:text-[40px]">Let’s get you set up.</h1><p className="mt-2 max-w-[540px] text-sm leading-6 text-muted-foreground">A few quick questions help Convarg prepare a workspace around the way your business works.</p></div><div className="min-w-[180px] sm:w-[220px]"><div className="mb-2 flex justify-between text-xs"><span className="font-medium">{review ? "Almost there" : `Step ${step + 1} of 6`}</span><span className="text-muted-foreground">{review ? "Review" : `${Math.round(((step + 1) / 6) * 100)}%`}</span></div><Progress value={review ? 100 : ((step + 1) / 6) * 100} className="h-1.5"/></div></div>
-        {!review && !assembling ? <div className="setup-question border-t border-border pt-7 sm:pt-10"><div className="mb-6 flex items-start justify-between gap-4"><div><h2 className="font-display text-[24px] font-semibold sm:text-[28px]">{current.title}</h2><p className="mt-1.5 text-sm text-muted-foreground">{current.description}</p></div><span className="hidden h-11 w-11 place-items-center border border-border bg-card text-primary sm:grid">{step + 1}<span className="text-muted-foreground">/6</span></span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{current.options.map((option) => { const checked = (selected[current.key] ?? []).includes(option); return <button key={option} onClick={() => toggle(option)} className={`choice-option group flex min-h-[68px] items-center gap-3 border px-4 text-left transition-colors ${checked ? "choice-option-selected border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50"}`}><span className={`grid h-5 w-5 place-items-center border transition-colors ${checked ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background group-hover:border-primary/50"}`}>{checked && <Check className="h-3.5 w-3.5"/>}</span><span className="text-sm font-medium">{option}</span><span className="ml-auto text-xs text-muted-foreground">{checked ? "Selected" : ""}</span></button>; })}</div><div className="mt-5"><label htmlFor="setup-other" className="mb-2 block text-sm font-medium">Something else? Tell us in your own words.</label><Input id="setup-other" placeholder={`Add another ${current.key === "industry" ? "industry" : "answer"}…`} value={other[current.key] ?? ""} onChange={(event) => setOther((values) => ({ ...values, [current.key]: event.target.value }))} /></div><div className="mt-8 flex flex-col-reverse justify-between gap-3 border-t border-border pt-5 sm:flex-row"><Button variant="outline" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}><ChevronLeft className="h-4 w-4"/>Back</Button><Button onClick={() => { if (step < 5) { const next = step + 1; onSave(next); setStep(next); } else { onSave(6); setReview(true); } }}>Continue<ChevronRight className="h-4 w-4"/></Button></div></div> : review && !assembling ? <div className="border-t border-border pt-7 sm:pt-10"><div className="mb-6"><h2 className="font-display text-[24px] font-semibold sm:text-[28px]">Here’s what we’ll put in place.</h2><p className="mt-1.5 text-sm text-muted-foreground">Review each building block. You’re in control of what gets added.</p></div><div className="divide-y divide-border border-y border-border">{[{name:"Customers",desc:"A shared place for customer and company details",dimension:"charge"},{name:"Products",desc:"Keep track of the products and services you offer",dimension:"offer"},{name:"Invoices",desc:"Send invoices and see what’s been paid",dimension:"charge"},{name:"Team workspace",desc:"People and activity, organised around your team",dimension:"team"}].map((item) => <div key={item.name} className="flex items-center gap-4 py-4"><Checkbox checked={confirmed.includes(item.name)} onCheckedChange={(value) => setConfirmed((items) => value ? [...items, item.name] : items.filter((name) => name !== item.name))} aria-label={`Include ${item.name}`} /><div className="min-w-0 flex-1"><p className="text-sm font-semibold">{item.name}</p><p className="text-xs leading-5 text-muted-foreground">{item.desc}</p></div><span className="hidden text-xs text-muted-foreground sm:block">From your answers</span><span className="availability-pill">Available</span></div>)}</div><div className="mt-5 flex gap-3 border border-border bg-muted/40 p-4"><Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-warning"/><div className="min-w-0"><p className="text-sm font-semibold">Coming soon</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Some of the things you mentioned are still in development. We’ve noted your interest and won’t add anything until it’s ready.</p><Button size="sm" variant="outline" className="mt-3" onClick={() => toast.success("We’ll let you know when those capabilities are ready.")}>Notify me when ready</Button></div></div><div className="mt-8 flex flex-col-reverse justify-between gap-3 border-t border-border pt-5 sm:flex-row"><Button variant="outline" onClick={() => setReview(false)}><ChevronLeft className="h-4 w-4"/>Back to answers</Button><Button onClick={startAssembly}>Create my workspace<ArrowRight className="h-4 w-4"/></Button></div></div> : <div className="mx-auto max-w-[580px] border-t border-border py-12 text-center sm:py-20"><div className="mx-auto mb-6 grid h-14 w-14 place-items-center bg-primary/10 text-primary">{assemblyProgress < 100 ? <Loader2 className="h-6 w-6 animate-spin"/> : <CheckCircle2 className="h-7 w-7"/>}</div><h2 className="font-display text-[26px] font-semibold">Building your workspace…</h2><p className="mx-auto mt-2 max-w-[420px] text-sm leading-6 text-muted-foreground">We’re putting the pieces together. It may take a moment — you can keep this page open.</p><Progress value={assemblyProgress} className="mx-auto mt-8 max-w-[360px]"/><div className="mx-auto mt-5 max-w-[360px] space-y-2 text-left">{["Preparing your workspace","Adding the building blocks","Getting your team ready"].map((label, index) => <p key={label} className="flex items-center gap-2 text-xs text-muted-foreground">{assemblyProgress >= (index+1)*30 ? <Check className="h-3.5 w-3.5 text-success"/> : <span className="h-3.5 w-3.5 rounded-full border border-border"/>}{label}</p>)}</div></div>}
+        <div className="setup-intro mb-8 flex flex-col justify-between gap-5 sm:mb-10 sm:flex-row sm:items-end">
+          <div>
+            <span className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+              <Sparkles className="h-4 w-4" />A workspace that fits you
+            </span>
+            <h1 className="font-display text-[32px] font-semibold leading-tight sm:text-[40px]">
+              Let’s get you set up.
+            </h1>
+            <p className="mt-2 max-w-[540px] text-sm leading-6 text-muted-foreground">
+              A few quick questions help Convarg prepare a workspace around the way your business
+              works.
+            </p>
+          </div>
+          <div className="min-w-[180px] sm:w-[220px]">
+            <div className="mb-2 flex justify-between text-xs">
+              <span className="font-medium">
+                {review ? "Almost there" : `Step ${step + 1} of 6`}
+              </span>
+              <span className="text-muted-foreground">
+                {review ? "Review" : `${Math.round(((step + 1) / 6) * 100)}%`}
+              </span>
+            </div>
+            <Progress value={review ? 100 : ((step + 1) / 6) * 100} className="h-1.5" />
+          </div>
+        </div>
+        {!review && !assembling ? (
+          <div className="setup-question border-t border-border pt-7 sm:pt-10">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="font-display text-[24px] font-semibold sm:text-[28px]">
+                  {current.title}
+                </h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">{current.description}</p>
+              </div>
+              <span className="hidden h-11 w-11 place-items-center border border-border bg-card text-primary sm:grid">
+                {step + 1}
+                <span className="text-muted-foreground">/6</span>
+              </span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {current.options.map((option) => {
+                const checked = (selected[current.key] ?? []).includes(option);
+                return (
+                  <button
+                    key={option}
+                    onClick={() => toggle(option)}
+                    className={`choice-option group flex min-h-[68px] items-center gap-3 border px-4 text-left transition-colors ${checked ? "choice-option-selected border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50"}`}
+                  >
+                    <span
+                      className={`grid h-5 w-5 place-items-center border transition-colors ${checked ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background group-hover:border-primary/50"}`}
+                    >
+                      {checked && <Check className="h-3.5 w-3.5" />}
+                    </span>
+                    <span className="text-sm font-medium">{option}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {checked ? "Selected" : ""}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-5">
+              <label htmlFor="setup-other" className="mb-2 block text-sm font-medium">
+                Something else? Tell us in your own words.
+              </label>
+              <Input
+                id="setup-other"
+                placeholder={`Add another ${current.key === "industry" ? "industry" : "answer"}…`}
+                value={other[current.key] ?? ""}
+                onChange={(event) =>
+                  setOther((values) => ({ ...values, [current.key]: event.target.value }))
+                }
+              />
+            </div>
+            <div className="mt-8 flex flex-col-reverse justify-between gap-3 border-t border-border pt-5 sm:flex-row">
+              <Button
+                variant="outline"
+                disabled={step === 0}
+                onClick={() => setStep((value) => Math.max(0, value - 1))}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <Button
+                onClick={() => {
+                  if (step < 5) {
+                    const next = step + 1;
+                    onSave(next);
+                    setStep(next);
+                  } else {
+                    onSave(6);
+                    setReview(true);
+                  }
+                }}
+              >
+                Continue
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ) : review && !assembling ? (
+          <div className="border-t border-border pt-7 sm:pt-10">
+            <div className="mb-6">
+              <h2 className="font-display text-[24px] font-semibold sm:text-[28px]">
+                Here’s what we’ll put in place.
+              </h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Review each building block. You’re in control of what gets added.
+              </p>
+            </div>
+            <div className="divide-y divide-border border-y border-border">
+              {[
+                {
+                  name: "Customers",
+                  desc: "A shared place for customer and company details",
+                  dimension: "charge",
+                },
+                {
+                  name: "Products",
+                  desc: "Keep track of the products and services you offer",
+                  dimension: "offer",
+                },
+                {
+                  name: "Invoices",
+                  desc: "Send invoices and see what’s been paid",
+                  dimension: "charge",
+                },
+                {
+                  name: "Team workspace",
+                  desc: "People and activity, organised around your team",
+                  dimension: "team",
+                },
+              ].map((item) => (
+                <div key={item.name} className="flex items-center gap-4 py-4">
+                  <Checkbox
+                    checked={confirmed.includes(item.name)}
+                    onCheckedChange={(value) =>
+                      setConfirmed((items) =>
+                        value ? [...items, item.name] : items.filter((name) => name !== item.name),
+                      )
+                    }
+                    aria-label={`Include ${item.name}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">{item.name}</p>
+                    <p className="text-xs leading-5 text-muted-foreground">{item.desc}</p>
+                  </div>
+                  <span className="hidden text-xs text-muted-foreground sm:block">
+                    From your answers
+                  </span>
+                  <span className="availability-pill">Available</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex gap-3 border border-border bg-muted/40 p-4">
+              <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">Coming soon</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Some of the things you mentioned are still in development. We’ve noted your
+                  interest and won’t add anything until it’s ready.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={() =>
+                    toast.success("We’ll let you know when those capabilities are ready.")
+                  }
+                >
+                  Notify me when ready
+                </Button>
+              </div>
+            </div>
+            <div className="mt-8 flex flex-col-reverse justify-between gap-3 border-t border-border pt-5 sm:flex-row">
+              <Button variant="outline" onClick={() => setReview(false)}>
+                <ChevronLeft className="h-4 w-4" />
+                Back to answers
+              </Button>
+              <Button onClick={startAssembly}>
+                Create my workspace
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mx-auto max-w-[580px] border-t border-border py-12 text-center sm:py-20">
+            <div className="mx-auto mb-6 grid h-14 w-14 place-items-center bg-primary/10 text-primary">
+              {assemblyProgress < 100 ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-7 w-7" />
+              )}
+            </div>
+            <h2 className="font-display text-[26px] font-semibold">Building your workspace…</h2>
+            <p className="mx-auto mt-2 max-w-[420px] text-sm leading-6 text-muted-foreground">
+              We’re putting the pieces together. It may take a moment — you can keep this page open.
+            </p>
+            <Progress value={assemblyProgress} className="mx-auto mt-8 max-w-[360px]" />
+            <div className="mx-auto mt-5 max-w-[360px] space-y-2 text-left">
+              {[
+                "Preparing your workspace",
+                "Adding the building blocks",
+                "Getting your team ready",
+              ].map((label, index) => (
+                <p key={label} className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {assemblyProgress >= (index + 1) * 30 ? (
+                    <Check className="h-3.5 w-3.5 text-success" />
+                  ) : (
+                    <span className="h-3.5 w-3.5 rounded-full border border-border" />
+                  )}
+                  {label}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
@@ -199,52 +1014,1065 @@ function Workspace() {
   const [filter, setFilter] = useState("All activity");
   const [search, setSearch] = useState("");
   const unreadCount = notifications.filter((item) => item.unread).length;
-  const navigation = <nav className="sidebar-nav flex-1 space-y-7 overflow-y-auto px-3 py-5">{navGroups.map((group) => <div key={group.label}><p className="mb-2 px-3 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground">{group.label}</p><div className="space-y-1">{group.items.map((item) => { const selected = item.view === view && !item.locked; return <button key={item.label} title={item.locked ? `${item.label} is not in your current plan` : undefined} onClick={() => { if (item.locked) { toast(`${item.label} is not in your current plan.`); return; } setView(item.view); setMobileNav(false); }} className={`flex min-h-10 w-full items-center gap-3 border-l-2 px-3 text-left text-[13px] transition-colors ${selected ? "border-primary bg-primary/5 font-semibold text-primary" : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}><item.icon className="h-[17px] w-[17px]"/><span className="flex-1">{item.label}</span>{item.badge && <span className="grid h-5 min-w-5 place-items-center rounded-sm bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{unreadCount}</span>}{item.locked && <LockKeyhole className="h-3.5 w-3.5 opacity-60"/>}</button>; })}</div></div>)}<div><p className="mb-2 px-3 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground">MORE</p><button className="flex min-h-10 w-full items-center gap-3 border-l-2 border-transparent px-3 text-left text-[13px] text-muted-foreground hover:bg-muted/60 hover:text-foreground" onClick={() => toast("Help centre is coming soon.")}><LifeBuoy className="h-[17px] w-[17px]"/>Help centre<ArrowUpRight className="ml-auto h-3.5 w-3.5"/></button></div></nav>;
+  const navigation = (
+    <nav className="sidebar-nav flex-1 space-y-7 overflow-y-auto px-3 py-5">
+      {navGroups.map((group) => (
+        <div key={group.label}>
+          <p className="mb-2 px-3 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground">
+            {group.label}
+          </p>
+          <div className="space-y-1">
+            {group.items.map((item) => {
+              const selected = item.view === view && !item.locked;
+              return (
+                <button
+                  key={item.label}
+                  title={item.locked ? `${item.label} is not in your current plan` : undefined}
+                  onClick={() => {
+                    if (item.locked) {
+                      toast(`${item.label} is not in your current plan.`);
+                      return;
+                    }
+                    setView(item.view);
+                    setMobileNav(false);
+                  }}
+                  className={`flex min-h-10 w-full items-center gap-3 border-l-2 px-3 text-left text-[13px] transition-colors ${selected ? "border-primary bg-primary/5 font-semibold text-primary" : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}
+                >
+                  <item.icon className="h-[17px] w-[17px]" />
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge && (
+                    <span className="grid h-5 min-w-5 place-items-center rounded-sm bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+                      {unreadCount}
+                    </span>
+                  )}
+                  {item.locked && <LockKeyhole className="h-3.5 w-3.5 opacity-60" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <div>
+        <p className="mb-2 px-3 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground">
+          MORE
+        </p>
+        <button
+          className="flex min-h-10 w-full items-center gap-3 border-l-2 border-transparent px-3 text-left text-[13px] text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          onClick={() => toast("Help centre is coming soon.")}
+        >
+          <LifeBuoy className="h-[17px] w-[17px]" />
+          Help centre
+          <ArrowUpRight className="ml-auto h-3.5 w-3.5" />
+        </button>
+      </div>
+    </nav>
+  );
   return (
     <div className="app-shell flex min-h-screen bg-background">
-      <aside className="desktop-sidebar fixed inset-y-0 left-0 z-20 hidden w-[242px] flex-col border-r border-border bg-card lg:flex"><div className="flex h-[68px] items-center border-b border-border px-5"><Brand/></div><button className="workspace-switch mx-3 mt-4 flex h-[54px] items-center gap-3 border border-border px-3 text-left hover:bg-muted/50"><span className="grid h-8 w-8 place-items-center bg-primary/10 text-xs font-bold text-primary">S</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">Sankofa Studio</span><span className="block text-xs text-muted-foreground">Free workspace</span></span><ChevronDown className="h-4 w-4 text-muted-foreground"/></button>{navigation}<div className="border-t border-border p-3"><DropdownMenu><DropdownMenuTrigger asChild><button className="flex min-h-[52px] w-full items-center gap-3 px-2 text-left hover:bg-muted/50"><span className="grid h-8 w-8 place-items-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">AO</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">Amara Okafor</span><span className="block truncate text-xs text-muted-foreground">amara@sankofa.ng</span></span><MoreHorizontal className="h-4 w-4 text-muted-foreground"/></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56"><DropdownMenuLabel>My account</DropdownMenuLabel><DropdownMenuSeparator/><DropdownMenuItem onClick={() => toast("Account settings are coming soon.")}><Settings2/>Account settings</DropdownMenuItem><DropdownMenuItem onClick={() => setView("preferences")}><Bell/>Notification preferences</DropdownMenuItem><DropdownMenuSeparator/><DropdownMenuItem onClick={() => window.location.reload()}><LogOut/>Sign out</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div></aside>
-      <div className="workspace-main flex min-w-0 flex-1 flex-col lg:ml-[242px]"><header className="topbar sticky top-0 z-10 flex h-[68px] items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur sm:px-7"><div className="flex min-w-0 items-center gap-3"><Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation" onClick={() => setMobileNav(true)}><Menu className="h-5 w-5"/></Button><div className="min-w-0"><p className="hidden text-[10px] font-semibold tracking-[0.14em] text-muted-foreground sm:block">SANKOFA STUDIO</p><p className="truncate text-sm font-semibold">{view === "home" ? "Workspace" : view === "notifications" ? "Notifications" : view === "preferences" ? "Preferences" : view === "invoices" ? "Invoices" : "Contacts"}</p></div></div><div className="flex items-center gap-2 sm:gap-3"><div className="search-wrap relative hidden md:block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search your workspace" placeholder="Search anything…" className="h-9 w-[230px] pl-9 pr-14 text-xs"/><kbd className="absolute right-2 top-1/2 flex h-5 items-center gap-1 border border-border px-1 text-[10px] text-muted-foreground"><Command className="h-3 w-3"/>K</kbd></div><Button variant="ghost" size="icon" aria-label="Search" className="md:hidden" onClick={() => setSearch((value) => value ? "" : " ")}><Search className="h-4 w-4"/></Button><Button variant="ghost" size="icon" aria-label="Notifications" className="relative" onClick={() => setView("notifications")}><Bell className="h-[18px] w-[18px]"/>{unreadCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-background"/>}</Button><span className="hidden h-6 border-l border-border sm:block"/><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-10 gap-2 px-1.5 sm:px-2"><span className="grid h-7 w-7 place-items-center rounded-full bg-secondary text-[10px] font-semibold text-secondary-foreground">AO</span><span className="hidden text-xs font-medium sm:block">Amara</span><ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground sm:block"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56"><DropdownMenuLabel><span className="block">Amara Okafor</span><span className="text-xs font-normal text-muted-foreground">amara@sankofa.ng</span></DropdownMenuLabel><DropdownMenuSeparator/><DropdownMenuItem onClick={() => toast("Account settings are coming soon.")}><Settings2/>Account settings</DropdownMenuItem><DropdownMenuItem onClick={() => setView("preferences")}><Bell/>Notification preferences</DropdownMenuItem><DropdownMenuSeparator/><DropdownMenuItem onClick={() => window.location.reload()}><LogOut/>Sign out</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div></header>
+      <aside className="desktop-sidebar fixed inset-y-0 left-0 z-20 hidden w-[242px] flex-col border-r border-border bg-card lg:flex">
+        <div className="flex h-[68px] items-center border-b border-border px-5">
+          <Brand />
+        </div>
+        <button className="workspace-switch mx-3 mt-4 flex h-[54px] items-center gap-3 border border-border px-3 text-left hover:bg-muted/50">
+          <span className="grid h-8 w-8 place-items-center bg-primary/10 text-xs font-bold text-primary">
+            S
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold">Sankofa Studio</span>
+            <span className="block text-xs text-muted-foreground">Free workspace</span>
+          </span>
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        </button>
+        {navigation}
+        <div className="border-t border-border p-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex min-h-[52px] w-full items-center gap-3 px-2 text-left hover:bg-muted/50">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
+                  AO
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">Amara Okafor</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    amara@sankofa.ng
+                  </span>
+                </span>
+                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => toast("Account settings are coming soon.")}>
+                <Settings2 />
+                Account settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setView("preferences")}>
+                <Bell />
+                Notification preferences
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => window.location.reload()}>
+                <LogOut />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </aside>
+      <div className="workspace-main flex min-w-0 flex-1 flex-col lg:ml-[242px]">
+        <header className="topbar sticky top-0 z-10 flex h-[68px] items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur sm:px-7">
+          <div className="flex min-w-0 items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              aria-label="Open navigation"
+              onClick={() => setMobileNav(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0">
+              <p className="hidden text-[10px] font-semibold tracking-[0.14em] text-muted-foreground sm:block">
+                SANKOFA STUDIO
+              </p>
+              <p className="truncate text-sm font-semibold">
+                {view === "home"
+                  ? "Workspace"
+                  : view === "notifications"
+                    ? "Notifications"
+                    : view === "preferences"
+                      ? "Preferences"
+                      : view === "invoices"
+                        ? "Invoices"
+                        : "Contacts"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="search-wrap relative hidden md:block">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                aria-label="Search your workspace"
+                placeholder="Search anything…"
+                className="h-9 w-[230px] pl-9 pr-14 text-xs"
+              />
+              <kbd className="absolute right-2 top-1/2 flex h-5 items-center gap-1 border border-border px-1 text-[10px] text-muted-foreground">
+                <Command className="h-3 w-3" />K
+              </kbd>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Search"
+              className="md:hidden"
+              onClick={() => setSearch((value) => (value ? "" : " "))}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
+                  <Bell className="h-[18px] w-[18px]" />
+                  {unreadCount > 0 && (
+                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[360px] p-0">
+                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                  <div>
+                    <p className="text-sm font-semibold">Notifications</p>
+                    <p className="text-xs text-muted-foreground">
+                      {unreadCount ? `${unreadCount} unread updates` : "You’re all caught up"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={!unreadCount}
+                    onClick={() => setNotifications(notifications.map((item) => ({ ...item, unread: false })))}
+                  >
+                    Mark all read
+                  </Button>
+                </div>
+                <div className="max-h-[340px] overflow-y-auto">
+                  {notifications.slice(0, 4).map((item) => {
+                    const ItemIcon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        className="flex w-full gap-3 border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted/50"
+                        onClick={() => {
+                          setNotifications(notifications.map((notification) => notification.id === item.id ? { ...notification, unread: false } : notification));
+                          if (item.type === "Invoice") setView("invoices");
+                        }}
+                      >
+                        <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center bg-muted/60 ${item.color}`}>
+                          <ItemIcon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-start gap-2">
+                            <span className={`text-xs leading-5 ${item.unread ? "font-semibold" : "font-medium"}`}>{item.title}</span>
+                            {item.unread && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{item.detail}</span>
+                          <span className="mt-1 block text-[10px] text-muted-foreground">{item.time}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-border px-4 py-2">
+                  <button className="w-full py-1 text-center text-xs font-medium text-primary hover:underline" onClick={() => setView("home")}>
+                    See all activity on your home
+                  </button>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <span className="hidden h-6 border-l border-border sm:block" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-10 gap-2 px-1.5 sm:px-2">
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-secondary text-[10px] font-semibold text-secondary-foreground">
+                    AO
+                  </span>
+                  <span className="hidden text-xs font-medium sm:block">Amara</span>
+                  <ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground sm:block" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <span className="block">Amara Okafor</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    amara@sankofa.ng
+                  </span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => toast("Account settings are coming soon.")}>
+                  <Settings2 />
+                  Account settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setView("preferences")}>
+                  <Bell />
+                  Notification preferences
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => window.location.reload()}>
+                  <LogOut />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
         <main className="workspace-content mx-auto w-full max-w-[1320px] flex-1 px-4 py-6 sm:px-7 sm:py-8 xl:px-10">
-          {view === "home" && <HomeView setView={setView} unreadCount={unreadCount}/>}
-          {view === "notifications" && <NotificationsView notifications={notifications} setNotifications={setNotifications} filter={filter} setFilter={setFilter}/>}
-          {view === "preferences" && <PreferencesView/>}
-          {view === "invoices" && <InvoicesView search={search}/>}
-          {view === "contacts" && <ContactsView search={search}/>}
+          {view === "home" && <HomeView setView={setView} unreadCount={unreadCount} />}
+          {view === "notifications" && (
+            <NotificationsView
+              notifications={notifications}
+              setNotifications={setNotifications}
+              filter={filter}
+              setFilter={setFilter}
+            />
+          )}
+          {view === "preferences" && <PreferencesView />}
+          {view === "invoices" && <InvoicesView search={search} />}
+          {view === "contacts" && <ContactsView search={search} />}
         </main>
-        <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-4 text-[11px] text-muted-foreground sm:px-7"><span>© 2026 Convarg Technologies</span><span className="flex items-center gap-3"><button className="hover:text-foreground" onClick={() => toast("Help centre is coming soon.")}>Help centre</button><span className="h-3 border-l border-border"/><span>VARG · Velocity, Automation, Reliability, Growth</span></span></footer>
+        <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-4 text-[11px] text-muted-foreground sm:px-7">
+          <span>© 2026 Convarg Technologies</span>
+          <span className="flex items-center gap-3">
+            <button
+              className="hover:text-foreground"
+              onClick={() => toast("Help centre is coming soon.")}
+            >
+              Help centre
+            </button>
+            <span className="h-3 border-l border-border" />
+            <span>VARG · Velocity, Automation, Reliability, Growth</span>
+          </span>
+        </footer>
       </div>
-      {mobileNav && <div className="mobile-nav-overlay fixed inset-0 z-40 lg:hidden"><button className="absolute inset-0 bg-foreground/30" aria-label="Close navigation" onClick={() => setMobileNav(false)}/><aside className="relative flex h-full w-[min(300px,85vw)] flex-col border-r border-border bg-card"><div className="flex h-[68px] items-center justify-between border-b border-border px-5"><Brand/><Button variant="ghost" size="icon" aria-label="Close navigation" onClick={() => setMobileNav(false)}><X className="h-4 w-4"/></Button></div><button className="mx-3 mt-4 flex h-[54px] items-center gap-3 border border-border px-3 text-left"><span className="grid h-8 w-8 place-items-center bg-primary/10 text-xs font-bold text-primary">S</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">Sankofa Studio</span><span className="block text-xs text-muted-foreground">Free workspace</span></span></button>{navigation}</aside></div>}
+      {mobileNav && (
+        <div className="mobile-nav-overlay fixed inset-0 z-40 lg:hidden">
+          <button
+            className="absolute inset-0 bg-foreground/30"
+            aria-label="Close navigation"
+            onClick={() => setMobileNav(false)}
+          />
+          <aside className="relative flex h-full w-[min(300px,85vw)] flex-col border-r border-border bg-card">
+            <div className="flex h-[68px] items-center justify-between border-b border-border px-5">
+              <Brand />
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Close navigation"
+                onClick={() => setMobileNav(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <button className="mx-3 mt-4 flex h-[54px] items-center gap-3 border border-border px-3 text-left">
+              <span className="grid h-8 w-8 place-items-center bg-primary/10 text-xs font-bold text-primary">
+                S
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">Sankofa Studio</span>
+                <span className="block text-xs text-muted-foreground">Free workspace</span>
+              </span>
+            </button>
+            {navigation}
+          </aside>
+        </div>
+      )}
     </div>
   );
 }
 
-function HomeView({ setView, unreadCount }: { setView: (view: View) => void; unreadCount: number }) {
-  return <div className="space-y-8"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="mb-2 text-xs font-medium text-muted-foreground">17 October 2026</p><h1 className="font-display text-[30px] font-semibold leading-tight sm:text-[34px]">Good morning, Amara<span className="text-primary">.</span></h1><p className="mt-2 text-sm text-muted-foreground">Here’s what’s happening with your business today.</p></div><Button onClick={() => toast("Your workspace is ready. Pick an app from the left to get started.")}><Plus className="h-4 w-4"/>Create new</Button></div><section className="next-steps flex flex-col justify-between gap-5 border border-primary/20 bg-primary/[0.035] p-5 sm:flex-row sm:items-center sm:p-6"><div className="flex gap-4"><span className="grid h-10 w-10 shrink-0 place-items-center bg-primary/10 text-primary"><Sparkles className="h-5 w-5"/></span><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-sm font-semibold">Make this workspace yours</h2><span className="status-chip status-info">Getting started</span></div><p className="mt-1 text-xs leading-5 text-muted-foreground">Invite your team so everyone can work together in one place.</p></div></div><Button variant="outline" size="sm" onClick={() => toast.success("Invitation link copied to clipboard.")}>Invite your team<ArrowRight className="h-3.5 w-3.5"/></Button></section><section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[{title:"Total revenue",amount:"₦4,280,000",change:"12.8%",trend:"up",note:"vs. last month",icon:WalletCards},{title:"Outstanding",amount:"₦1,245,000",change:"4 invoices",trend:"flat",note:"awaiting payment",icon:FileText},{title:"Active customers",amount:"38",change:"6 new",trend:"up",note:"this month",icon:Users},{title:"Awaiting approval",amount:"3",change:"Needs attention",trend:"down",note:"review requests",icon:CheckCircle2}].map((item) => <article className="metric-card border border-border bg-card p-4 sm:p-5" key={item.title}><div className="flex items-center justify-between"><p className="text-xs text-muted-foreground">{item.title}</p><item.icon className="h-4 w-4 text-muted-foreground"/></div><p className="mt-4 font-display text-[25px] font-semibold tabular-nums">{item.amount}</p><p className="mt-2 flex items-center gap-1.5 text-xs"><span className={item.trend === "down" ? "text-warning" : "text-success"}>{item.trend === "down" ? <ArrowDownRight className="inline h-3.5 w-3.5"/> : <ArrowUpRight className="inline h-3.5 w-3.5"/>}{item.change}</span><span className="text-muted-foreground">{item.note}</span></p></article>)}</section><div className="grid gap-6 xl:grid-cols-[1.35fr_0.9fr]"><section className="border border-border bg-card"><div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-5"><div><h2 className="text-sm font-semibold">Recent activity</h2><p className="mt-1 text-xs text-muted-foreground">The latest across your workspace</p></div><Button variant="ghost" size="sm" onClick={() => setView("notifications")}>View all<ArrowRight className="h-3.5 w-3.5"/></Button></div><div className="divide-y divide-border">{activities.map((item) => <div key={item.title} className="flex items-center gap-3 px-4 py-4 sm:px-5"><span className={`grid h-9 w-9 shrink-0 place-items-center bg-muted/60 ${item.color}`}><item.icon className="h-4 w-4"/></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{item.title}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{item.detail}</p></div><span className="hidden text-right text-[11px] text-muted-foreground sm:block">{item.time}</span><span className="hidden min-w-[86px] text-right font-mono text-xs text-muted-foreground md:block">{item.mark}</span></div>)}</div></section><section className="border border-border bg-card"><div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-5"><div><h2 className="text-sm font-semibold">Your apps</h2><p className="mt-1 text-xs text-muted-foreground">Your business, all in one place</p></div><Button variant="ghost" size="icon" aria-label="Browse apps" onClick={() => toast("More Convarg apps are coming soon.")}><Grid2X2 className="h-4 w-4"/></Button></div><div className="grid grid-cols-2 gap-0">{[{title:"VargBooks",detail:"Invoices & finance",icon:WalletCards,color:"app-icon-books",active:true},{title:"VargCore",detail:"People & records",icon:Users,color:"app-icon-core",active:true},{title:"VargFlow",detail:"Approvals",icon:Layers3,color:"app-icon-flow",active:false},{title:"VargDesk",detail:"Customer support",icon:LifeBuoy,color:"app-icon-desk",active:false}].map((app) => <button key={app.title} className="app-shortcut flex items-center gap-3 border-b border-r border-border p-4 text-left transition-colors hover:bg-muted/40" onClick={() => app.active ? toast(`${app.title} is ready to explore.`) : toast(`${app.title} isn’t in your current plan.`)}><span className={`grid h-9 w-9 shrink-0 place-items-center ${app.color}`}><app.icon className="h-4 w-4"/></span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{app.title}</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{app.detail}</span></span>{app.active ? <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground"/> : <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground"/>}</button>)}</div><button className="flex min-h-11 w-full items-center justify-center gap-2 text-xs font-medium text-primary hover:bg-muted/30" onClick={() => toast("Discover all Convarg apps.")}>Discover all apps<ArrowRight className="h-3.5 w-3.5"/></button></section></div><section className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5"><div className="flex items-center gap-2 text-xs text-muted-foreground"><Bell className="h-4 w-4"/><span>{unreadCount ? `${unreadCount} unread updates` : "You’re all caught up"}</span></div><Button variant="link" size="sm" className="h-auto px-0" onClick={() => setView("notifications")}>Open notifications<ArrowRight className="h-3.5 w-3.5"/></Button></section></div>;
+function HomeView({
+  setView,
+  unreadCount,
+}: {
+  setView: (view: View) => void;
+  unreadCount: number;
+}) {
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">17 October 2026</p>
+          <h1 className="font-display text-[30px] font-semibold leading-tight sm:text-[34px]">
+            Good morning, Amara<span className="text-primary">.</span>
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Here’s what’s happening with your business today.
+          </p>
+        </div>
+        <Button
+          onClick={() =>
+            toast("Your workspace is ready. Pick an app from the left to get started.")
+          }
+        >
+          <Plus className="h-4 w-4" />
+          Create new
+        </Button>
+      </div>
+      <section className="next-steps flex flex-col justify-between gap-5 border border-primary/20 bg-primary/[0.035] p-5 sm:flex-row sm:items-center sm:p-6">
+        <div className="flex gap-4">
+          <span className="grid h-10 w-10 shrink-0 place-items-center bg-primary/10 text-primary">
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-semibold">Make this workspace yours</h2>
+              <span className="status-chip status-info">Getting started</span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Invite your team so everyone can work together in one place.
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => toast.success("Invitation link copied to clipboard.")}
+        >
+          Invite your team
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
+      </section>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            title: "Total revenue",
+            amount: "₦4,280,000",
+            change: "12.8%",
+            trend: "up",
+            note: "vs. last month",
+            icon: WalletCards,
+          },
+          {
+            title: "Outstanding",
+            amount: "₦1,245,000",
+            change: "4 invoices",
+            trend: "flat",
+            note: "awaiting payment",
+            icon: FileText,
+          },
+          {
+            title: "Active customers",
+            amount: "38",
+            change: "6 new",
+            trend: "up",
+            note: "this month",
+            icon: Users,
+          },
+          {
+            title: "Awaiting approval",
+            amount: "3",
+            change: "Needs attention",
+            trend: "down",
+            note: "review requests",
+            icon: CheckCircle2,
+          },
+        ].map((item) => (
+          <article className="metric-card border border-border bg-card p-4 sm:p-5" key={item.title}>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">{item.title}</p>
+              <item.icon className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="mt-4 font-display text-[25px] font-semibold tabular-nums">
+              {item.amount}
+            </p>
+            <p className="mt-2 flex items-center gap-1.5 text-xs">
+              <span className={item.trend === "down" ? "text-warning" : "text-success"}>
+                {item.trend === "down" ? (
+                  <ArrowDownRight className="inline h-3.5 w-3.5" />
+                ) : (
+                  <ArrowUpRight className="inline h-3.5 w-3.5" />
+                )}
+                {item.change}
+              </span>
+              <span className="text-muted-foreground">{item.note}</span>
+            </p>
+          </article>
+        ))}
+      </section>
+      <div className="grid gap-6 xl:grid-cols-[1.35fr_0.9fr]">
+        <section className="border border-border bg-card">
+          <div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-5">
+            <div>
+              <h2 className="text-sm font-semibold">Recent activity</h2>
+              <p className="mt-1 text-xs text-muted-foreground">The latest across your workspace</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => toast("Your latest activity is shown below.")}>
+              View all
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="divide-y divide-border">
+            {activities.map((item) => (
+              <div key={item.title} className="flex items-center gap-3 px-4 py-4 sm:px-5">
+                <span
+                  className={`grid h-9 w-9 shrink-0 place-items-center bg-muted/60 ${item.color}`}
+                >
+                  <item.icon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{item.title}</p>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.detail}</p>
+                </div>
+                <span className="hidden text-right text-[11px] text-muted-foreground sm:block">
+                  {item.time}
+                </span>
+                <span className="hidden min-w-[86px] text-right font-mono text-xs text-muted-foreground md:block">
+                  {item.mark}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="border border-border bg-card">
+          <div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-5">
+            <div>
+              <h2 className="text-sm font-semibold">Your apps</h2>
+              <p className="mt-1 text-xs text-muted-foreground">Your business, all in one place</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Browse apps"
+              onClick={() => toast("More Convarg apps are coming soon.")}
+            >
+              <Grid2X2 className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-0">
+            {[
+              {
+                title: "VargBooks",
+                detail: "Invoices & finance",
+                icon: WalletCards,
+                color: "app-icon-books",
+                active: true,
+              },
+              {
+                title: "VargCore",
+                detail: "People & records",
+                icon: Users,
+                color: "app-icon-core",
+                active: true,
+              },
+              {
+                title: "VargFlow",
+                detail: "Approvals",
+                icon: Layers3,
+                color: "app-icon-flow",
+                active: false,
+              },
+              {
+                title: "VargDesk",
+                detail: "Customer support",
+                icon: LifeBuoy,
+                color: "app-icon-desk",
+                active: false,
+              },
+            ].map((app) => (
+              <button
+                key={app.title}
+                className="app-shortcut flex items-center gap-3 border-b border-r border-border p-4 text-left transition-colors hover:bg-muted/40"
+                onClick={() => {
+                  if (!app.active) {
+                    toast(`${app.title} isn’t in your current plan.`);
+                    return;
+                  }
+                  if (app.title === "VargBooks") {
+                    setView("invoices");
+                    return;
+                  }
+                  if (app.title === "VargCore") {
+                    setView("contacts");
+                    return;
+                  }
+                  toast(`${app.title} is ready to explore.`);
+                }}
+              >
+                <span className={`grid h-9 w-9 shrink-0 place-items-center ${app.color}`}>
+                  <app.icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-semibold">{app.title}</span>
+                  <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                    {app.detail}
+                  </span>
+                </span>
+                {app.active ? (
+                  <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+              </button>
+            ))}
+          </div>
+          <button
+            className="flex min-h-11 w-full items-center justify-center gap-2 text-xs font-medium text-primary hover:bg-muted/30"
+            onClick={() => toast("Discover all Convarg apps.")}
+          >
+            Discover all apps
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </section>
+      </div>
+      <section className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Bell className="h-4 w-4" />
+          <span>{unreadCount ? `${unreadCount} unread updates` : "You’re all caught up"}</span>
+        </div>
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto px-0"
+          onClick={() => toast("Your latest activity is shown above.")}
+        >
+          Review activity
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
+      </section>
+    </div>
+  );
 }
 
-function NotificationsView({ notifications, setNotifications, filter, setFilter }: { notifications: typeof notificationSeed; setNotifications: (value: typeof notificationSeed) => void; filter: string; setFilter: (value: string) => void }) {
-  const visible = notifications.filter((item) => filter === "Unread" ? item.unread : true);
+function NotificationsView({
+  notifications,
+  setNotifications,
+  filter,
+  setFilter,
+}: {
+  notifications: typeof notificationSeed;
+  setNotifications: (value: typeof notificationSeed) => void;
+  filter: string;
+  setFilter: (value: string) => void;
+}) {
+  const visible = notifications.filter((item) => (filter === "Unread" ? item.unread : true));
   const markAll = () => setNotifications(notifications.map((item) => ({ ...item, unread: false })));
-  return <div className="mx-auto max-w-[980px]"><div className="flex flex-col justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:items-end"><div><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Home className="h-3 w-3"/><ChevronRight className="h-3 w-3"/>Workspace</div><h1 className="font-display text-[30px] font-semibold">Notifications</h1><p className="mt-1.5 text-sm text-muted-foreground">Updates about the work happening across your business.</p></div><Button variant="outline" size="sm" onClick={markAll} disabled={notifications.every((item) => !item.unread)}><CheckCheck className="h-4 w-4"/>Mark all as read</Button></div><div className="flex items-center justify-between border-b border-border py-4"><div className="flex gap-1">{["All activity","Unread"].map((tab) => <button key={tab} onClick={() => setFilter(tab)} className={`min-h-9 px-3 text-xs font-medium transition-colors ${filter === tab ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>{tab}{tab === "Unread" && <span className="ml-2 text-[10px]">{notifications.filter((item) => item.unread).length}</span>}</button>)}</div><Button variant="ghost" size="icon" aria-label="Notification settings" onClick={() => setFilter("Settings")}><Settings2 className="h-4 w-4"/></Button></div>{filter === "Settings" ? <PreferencesView/> : <div className="divide-y divide-border">{visible.length ? visible.map((item) => <article key={item.id} className={`notification-row flex gap-3 py-5 sm:gap-4 ${item.unread ? "notification-unread" : ""}`}><span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center bg-muted/60 ${item.color}`}><item.icon className="h-[17px] w-[17px]"/></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{item.type}</span>{item.unread && <span className="h-1.5 w-1.5 rounded-full bg-primary"/>}</div><h2 className="mt-1 text-sm font-semibold">{item.title}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p><span className="mt-2 block text-[10px] text-muted-foreground">{item.time}</span></div><div className="flex items-start gap-1"><Button variant="ghost" size="icon" aria-label={item.unread ? "Mark as read" : "Mark as unread"} title={item.unread ? "Mark as read" : "Mark as unread"} onClick={() => setNotifications(notifications.map((n) => n.id === item.id ? {...n, unread: !n.unread} : n))}>{item.unread ? <Check className="h-4 w-4"/> : <MoreHorizontal className="h-4 w-4"/>}</Button></div></article>) : <div className="py-16 text-center"><span className="mx-auto grid h-12 w-12 place-items-center bg-muted text-muted-foreground"><Inbox className="h-5 w-5"/></span><h2 className="mt-4 text-sm font-semibold">You’re all caught up</h2><p className="mt-1 text-xs text-muted-foreground">New updates will show up here.</p></div>}</div>}<p className="border-t border-border py-5 text-center text-[10px] text-muted-foreground">You’re up to date · Notifications from the last 30 days</p></div>;
+  return (
+    <div className="mx-auto max-w-[980px]">
+      <div className="flex flex-col justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:items-end">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <Home className="h-3 w-3" />
+            <ChevronRight className="h-3 w-3" />
+            Workspace
+          </div>
+          <h1 className="font-display text-[30px] font-semibold">Notifications</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Updates about the work happening across your business.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={markAll}
+          disabled={notifications.every((item) => !item.unread)}
+        >
+          <CheckCheck className="h-4 w-4" />
+          Mark all as read
+        </Button>
+      </div>
+      <div className="flex items-center justify-between border-b border-border py-4">
+        <div className="flex gap-1">
+          {["All activity", "Unread"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setFilter(tab)}
+              className={`min-h-9 px-3 text-xs font-medium transition-colors ${filter === tab ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {tab}
+              {tab === "Unread" && (
+                <span className="ml-2 text-[10px]">
+                  {notifications.filter((item) => item.unread).length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Notification settings"
+          onClick={() => setFilter("Settings")}
+        >
+          <Settings2 className="h-4 w-4" />
+        </Button>
+      </div>
+      {filter === "Settings" ? (
+        <PreferencesView />
+      ) : (
+        <div className="divide-y divide-border">
+          {visible.length ? (
+            visible.map((item) => (
+              <article
+                key={item.id}
+                className={`notification-row flex gap-3 py-5 sm:gap-4 ${item.unread ? "notification-unread" : ""}`}
+              >
+                <span
+                  className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center bg-muted/60 ${item.color}`}
+                >
+                  <item.icon className="h-[17px] w-[17px]" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                      {item.type}
+                    </span>
+                    {item.unread && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                  </div>
+                  <h2 className="mt-1 text-sm font-semibold">{item.title}</h2>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
+                  <span className="mt-2 block text-[10px] text-muted-foreground">{item.time}</span>
+                </div>
+                <div className="flex items-start gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={item.unread ? "Mark as read" : "Mark as unread"}
+                    title={item.unread ? "Mark as read" : "Mark as unread"}
+                    onClick={() =>
+                      setNotifications(
+                        notifications.map((n) =>
+                          n.id === item.id ? { ...n, unread: !n.unread } : n,
+                        ),
+                      )
+                    }
+                  >
+                    {item.unread ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <MoreHorizontal className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="py-16 text-center">
+              <span className="mx-auto grid h-12 w-12 place-items-center bg-muted text-muted-foreground">
+                <Inbox className="h-5 w-5" />
+              </span>
+              <h2 className="mt-4 text-sm font-semibold">You’re all caught up</h2>
+              <p className="mt-1 text-xs text-muted-foreground">New updates will show up here.</p>
+            </div>
+          )}
+        </div>
+      )}
+      <p className="border-t border-border py-5 text-center text-[10px] text-muted-foreground">
+        You’re up to date · Notifications from the last 30 days
+      </p>
+    </div>
+  );
 }
 
 function PreferencesView() {
-  const [preferences, setPreferences] = useState({ activity: true, payments: true, approvals: true, security: true, email: false });
-  return <div className="mx-auto max-w-[820px]"><div className="border-b border-border pb-6"><div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Home className="h-3 w-3"/><ChevronRight className="h-3 w-3"/>Workspace<ChevronRight className="h-3 w-3"/>Notifications</div><h1 className="font-display text-[30px] font-semibold">Notification preferences</h1><p className="mt-1.5 text-sm text-muted-foreground">Choose which updates you’d like to receive.</p></div><div className="mt-6 divide-y divide-border border-y border-border">{[{key:"activity",title:"Workspace activity",desc:"Updates about your team and shared records."},{key:"payments",title:"Payments and invoices",desc:"Payment confirmations, due dates and invoice activity."},{key:"approvals",title:"Approvals",desc:"Requests waiting for your attention and decisions."},{key:"security",title:"Security alerts",desc:"New sign-ins and changes to your account."},{key:"email",title:"Email notifications",desc:"Send selected notifications to your email as well."}].map((item) => <label key={item.key} className="flex min-h-[76px] cursor-pointer items-center gap-4 py-4"><Checkbox checked={preferences[item.key as keyof typeof preferences]} onCheckedChange={(value) => setPreferences({...preferences,[item.key]:Boolean(value)})} aria-label={item.title}/><span className="flex-1"><span className="block text-sm font-medium">{item.title}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{item.desc}</span></span></label>)}</div><div className="mt-5 flex justify-end"><Button onClick={() => toast.success("Your notification preferences are saved.")}>Save preferences</Button></div></div>;
+  const [preferences, setPreferences] = useState({
+    activity: true,
+    payments: true,
+    approvals: true,
+    security: true,
+    email: false,
+  });
+  return (
+    <div className="mx-auto max-w-[820px]">
+      <div className="border-b border-border pb-6">
+        <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <Home className="h-3 w-3" />
+          <ChevronRight className="h-3 w-3" />
+          Workspace
+          <ChevronRight className="h-3 w-3" />
+          Notifications
+        </div>
+        <h1 className="font-display text-[30px] font-semibold">Notification preferences</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Choose which updates you’d like to receive.
+        </p>
+      </div>
+      <div className="mt-6 divide-y divide-border border-y border-border">
+        {[
+          {
+            key: "activity",
+            title: "Workspace activity",
+            desc: "Updates about your team and shared records.",
+          },
+          {
+            key: "payments",
+            title: "Payments and invoices",
+            desc: "Payment confirmations, due dates and invoice activity.",
+          },
+          {
+            key: "approvals",
+            title: "Approvals",
+            desc: "Requests waiting for your attention and decisions.",
+          },
+          {
+            key: "security",
+            title: "Security alerts",
+            desc: "New sign-ins and changes to your account.",
+          },
+          {
+            key: "email",
+            title: "Email notifications",
+            desc: "Send selected notifications to your email as well.",
+          },
+        ].map((item) => (
+          <label
+            key={item.key}
+            className="flex min-h-[76px] cursor-pointer items-center gap-4 py-4"
+          >
+            <Checkbox
+              checked={preferences[item.key as keyof typeof preferences]}
+              onCheckedChange={(value) =>
+                setPreferences({ ...preferences, [item.key]: Boolean(value) })
+              }
+              aria-label={item.title}
+            />
+            <span className="flex-1">
+              <span className="block text-sm font-medium">{item.title}</span>
+              <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                {item.desc}
+              </span>
+            </span>
+          </label>
+        ))}
+      </div>
+      <div className="mt-5 flex justify-end">
+        <Button onClick={() => toast.success("Your notification preferences are saved.")}>
+          Save preferences
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function InvoicesView({ search }: { search: string }) {
-  const rows = [{id:"INV-0028",customer:"Northstar Logistics",date:"17 Oct 2026",due:"31 Oct 2026",amount:"₦840,000.00",status:"Paid"},{id:"INV-0027",customer:"Kora Foods",date:"15 Oct 2026",due:"29 Oct 2026",amount:"₦325,000.00",status:"Pending"},{id:"INV-0026",customer:"Apex Creative Co.",date:"12 Oct 2026",due:"18 Oct 2026",amount:"₦210,000.00",status:"Overdue"},{id:"INV-0025",customer:"Mosaic Retail",date:"10 Oct 2026",due:"24 Oct 2026",amount:"₦465,000.00",status:"Paid"}].filter((row) => `${row.id} ${row.customer} ${row.status}`.toLowerCase().includes(search.toLowerCase().trim()));
-  return <div><div className="flex flex-col justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:items-end"><div><p className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Home className="h-3 w-3"/><ChevronRight className="h-3 w-3"/>VargBooks</p><h1 className="font-display text-[30px] font-semibold">Invoices</h1><p className="mt-1.5 text-sm text-muted-foreground">Create, send and keep track of customer invoices.</p></div><Button onClick={() => toast("Invoice editor is coming soon.")}><Plus className="h-4 w-4"/>New invoice</Button></div><div className="my-5 grid gap-3 sm:grid-cols-3">{[{label:"Paid this month",value:"₦2,840,000"},{label:"Awaiting payment",value:"₦1,245,000"},{label:"Overdue",value:"₦210,000"}].map((item) => <div key={item.label} className="border border-border bg-card p-4"><p className="text-xs text-muted-foreground">{item.label}</p><p className="mt-2 font-display text-xl font-semibold tabular-nums">{item.value}</p></div>)}</div><div className="flex items-center justify-between border border-b-0 border-border bg-card p-3"><span className="text-xs font-medium">All invoices <span className="ml-1 text-muted-foreground">12</span></span><Button variant="outline" size="sm" onClick={() => toast("Invoice filters")}><Filter className="h-3.5 w-3.5"/>Filters</Button></div><div className="overflow-x-auto border border-border bg-card"><table className="w-full min-w-[740px] text-left text-xs"><thead className="bg-muted/40 text-muted-foreground"><tr>{["Invoice","Customer","Issue date","Due date","Amount","Status",""].map((head) => <th key={head} className="px-4 py-3 font-medium">{head}</th>)}</tr></thead><tbody className="divide-y divide-border">{rows.map((row) => <tr key={row.id} className="hover:bg-muted/30"><td className="px-4 py-4 font-mono font-medium text-primary">{row.id}</td><td className="px-4 py-4 font-medium">{row.customer}</td><td className="px-4 py-4 text-muted-foreground">{row.date}</td><td className="px-4 py-4 text-muted-foreground">{row.due}</td><td className="px-4 py-4 text-right font-mono tabular-nums">{row.amount}</td><td className="px-4 py-4"><span className={`status-chip ${row.status === "Paid" ? "status-success" : row.status === "Overdue" ? "status-error" : "status-warning"}`}>{row.status}</span></td><td className="px-4 py-4"><Button variant="ghost" size="icon" aria-label={`More actions for ${row.id}`} onClick={() => toast(`Actions for ${row.id}`)}><MoreHorizontal className="h-4 w-4"/></Button></td></tr>)}</tbody></table>{rows.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">No invoices match your search.</div>}</div><div className="flex items-center justify-between py-4 text-xs text-muted-foreground"><span>Showing 1–{rows.length} of 12</span><div className="flex gap-1"><Button variant="outline" size="icon" aria-label="Previous page" disabled><ChevronLeft className="h-3.5 w-3.5"/></Button><Button variant="outline" size="icon" aria-label="Next page" onClick={() => toast("You’re viewing the first page.")}><ChevronRight className="h-3.5 w-3.5"/></Button></div></div></div>;
+  const rows = [
+    {
+      id: "INV-0028",
+      customer: "Northstar Logistics",
+      date: "17 Oct 2026",
+      due: "31 Oct 2026",
+      amount: "₦840,000.00",
+      status: "Paid",
+    },
+    {
+      id: "INV-0027",
+      customer: "Kora Foods",
+      date: "15 Oct 2026",
+      due: "29 Oct 2026",
+      amount: "₦325,000.00",
+      status: "Pending",
+    },
+    {
+      id: "INV-0026",
+      customer: "Apex Creative Co.",
+      date: "12 Oct 2026",
+      due: "18 Oct 2026",
+      amount: "₦210,000.00",
+      status: "Overdue",
+    },
+    {
+      id: "INV-0025",
+      customer: "Mosaic Retail",
+      date: "10 Oct 2026",
+      due: "24 Oct 2026",
+      amount: "₦465,000.00",
+      status: "Paid",
+    },
+  ].filter((row) =>
+    `${row.id} ${row.customer} ${row.status}`.toLowerCase().includes(search.toLowerCase().trim()),
+  );
+  return (
+    <div>
+      <div className="flex flex-col justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:items-end">
+        <div>
+          <p className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <Home className="h-3 w-3" />
+            <ChevronRight className="h-3 w-3" />
+            VargBooks
+          </p>
+          <h1 className="font-display text-[30px] font-semibold">Invoices</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Create, send and keep track of customer invoices.
+          </p>
+        </div>
+        <Button onClick={() => toast("Invoice editor is coming soon.")}>
+          <Plus className="h-4 w-4" />
+          New invoice
+        </Button>
+      </div>
+      <div className="my-5 grid gap-3 sm:grid-cols-3">
+        {[
+          { label: "Paid this month", value: "₦2,840,000" },
+          { label: "Awaiting payment", value: "₦1,245,000" },
+          { label: "Overdue", value: "₦210,000" },
+        ].map((item) => (
+          <div key={item.label} className="border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground">{item.label}</p>
+            <p className="mt-2 font-display text-xl font-semibold tabular-nums">{item.value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between border border-b-0 border-border bg-card p-3">
+        <span className="text-xs font-medium">
+          All invoices <span className="ml-1 text-muted-foreground">12</span>
+        </span>
+        <Button variant="outline" size="sm" onClick={() => toast("Invoice filters")}>
+          <Filter className="h-3.5 w-3.5" />
+          Filters
+        </Button>
+      </div>
+      <div className="overflow-x-auto border border-border bg-card">
+        <table className="w-full min-w-[740px] text-left text-xs">
+          <thead className="bg-muted/40 text-muted-foreground">
+            <tr>
+              {["Invoice", "Customer", "Issue date", "Due date", "Amount", "Status", ""].map(
+                (head) => (
+                  <th key={head} className="px-4 py-3 font-medium">
+                    {head}
+                  </th>
+                ),
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {rows.map((row) => (
+              <tr key={row.id} className="hover:bg-muted/30">
+                <td className="px-4 py-4 font-mono font-medium text-primary">{row.id}</td>
+                <td className="px-4 py-4 font-medium">{row.customer}</td>
+                <td className="px-4 py-4 text-muted-foreground">{row.date}</td>
+                <td className="px-4 py-4 text-muted-foreground">{row.due}</td>
+                <td className="px-4 py-4 text-right font-mono tabular-nums">{row.amount}</td>
+                <td className="px-4 py-4">
+                  <span
+                    className={`status-chip ${row.status === "Paid" ? "status-success" : row.status === "Overdue" ? "status-error" : "status-warning"}`}
+                  >
+                    {row.status}
+                  </span>
+                </td>
+                <td className="px-4 py-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`More actions for ${row.id}`}
+                    onClick={() => toast(`Actions for ${row.id}`)}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length === 0 && (
+          <div className="py-12 text-center text-sm text-muted-foreground">
+            No invoices match your search.
+          </div>
+        )}
+      </div>
+      <div className="flex items-center justify-between py-4 text-xs text-muted-foreground">
+        <span>Showing 1–{rows.length} of 12</span>
+        <div className="flex gap-1">
+          <Button variant="outline" size="icon" aria-label="Previous page" disabled>
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Next page"
+            onClick={() => toast("You’re viewing the first page.")}
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ContactsView({ search }: { search: string }) {
-  const rows = [{name:"Northstar Logistics",type:"Company",email:"hello@northstar.ng",activity:"Paid INV-0028 today",tone:"contact-tone-one"},{name:"Kora Foods",type:"Company",email:"accounts@korafoods.ng",activity:"Invoice due 18 Oct",tone:"contact-tone-two"},{name:"Chidi Nwosu",type:"Team member",email:"chidi@sankofa.ng",activity:"Joined yesterday",tone:"contact-tone-three"},{name:"Apex Creative Co.",type:"Company",email:"finance@apexcreative.ng",activity:"Invoice overdue",tone:"contact-tone-four"}].filter((row) => `${row.name} ${row.type} ${row.email}`.toLowerCase().includes(search.toLowerCase().trim()));
-  return <div><div className="flex flex-col justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:items-end"><div><p className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Home className="h-3 w-3"/><ChevronRight className="h-3 w-3"/>VargCore</p><h1 className="font-display text-[30px] font-semibold">Directory</h1><p className="mt-1.5 text-sm text-muted-foreground">People and businesses connected to your workspace.</p></div><Button onClick={() => toast("Add a person or business to your directory.")}><Plus className="h-4 w-4"/>Add contact</Button></div><div className="my-5 flex gap-2 border-b border-border">{["All contacts","Companies","People"].map((tab,index) => <button key={tab} className={`min-h-10 px-3 text-xs font-medium ${index === 0 ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`} onClick={() => toast(`${tab} view selected.`)}>{tab}<span className="ml-1.5 text-[10px]">{index === 0 ? "38" : index === 1 ? "24" : "14"}</span></button>)}</div><div className="divide-y divide-border border-y border-border bg-card">{rows.map((row) => <button key={row.name} onClick={() => toast(`${row.name} contact details`)} className="flex w-full items-center gap-3 px-3 py-4 text-left hover:bg-muted/30 sm:gap-4 sm:px-5"><span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-xs font-semibold ${row.tone}`}>{row.name.split(" ").map((word) => word[0]).slice(0,2).join("")}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{row.name}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{row.email}</span></span><span className="hidden min-w-[105px] text-xs text-muted-foreground sm:block">{row.type}</span><span className="hidden min-w-[160px] text-right text-xs text-muted-foreground md:block">{row.activity}</span><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground"/></button>)}</div><div className="flex items-center justify-between py-4 text-xs text-muted-foreground"><span>Showing {rows.length} of 38 contacts</span><Button variant="outline" size="sm" onClick={() => toast("More contacts loaded.")}>Load more</Button></div></div>;
+  const rows = [
+    {
+      name: "Northstar Logistics",
+      type: "Company",
+      email: "hello@northstar.ng",
+      activity: "Paid INV-0028 today",
+      tone: "contact-tone-one",
+    },
+    {
+      name: "Kora Foods",
+      type: "Company",
+      email: "accounts@korafoods.ng",
+      activity: "Invoice due 18 Oct",
+      tone: "contact-tone-two",
+    },
+    {
+      name: "Chidi Nwosu",
+      type: "Team member",
+      email: "chidi@sankofa.ng",
+      activity: "Joined yesterday",
+      tone: "contact-tone-three",
+    },
+    {
+      name: "Apex Creative Co.",
+      type: "Company",
+      email: "finance@apexcreative.ng",
+      activity: "Invoice overdue",
+      tone: "contact-tone-four",
+    },
+  ].filter((row) =>
+    `${row.name} ${row.type} ${row.email}`.toLowerCase().includes(search.toLowerCase().trim()),
+  );
+  return (
+    <div>
+      <div className="flex flex-col justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:items-end">
+        <div>
+          <p className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <Home className="h-3 w-3" />
+            <ChevronRight className="h-3 w-3" />
+            VargCore
+          </p>
+          <h1 className="font-display text-[30px] font-semibold">Directory</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            People and businesses connected to your workspace.
+          </p>
+        </div>
+        <Button onClick={() => toast("Add a person or business to your directory.")}>
+          <Plus className="h-4 w-4" />
+          Add contact
+        </Button>
+      </div>
+      <div className="my-5 flex gap-2 border-b border-border">
+        {["All contacts", "Companies", "People"].map((tab, index) => (
+          <button
+            key={tab}
+            className={`min-h-10 px-3 text-xs font-medium ${index === 0 ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            onClick={() => toast(`${tab} view selected.`)}
+          >
+            {tab}
+            <span className="ml-1.5 text-[10px]">
+              {index === 0 ? "38" : index === 1 ? "24" : "14"}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="divide-y divide-border border-y border-border bg-card">
+        {rows.map((row) => (
+          <button
+            key={row.name}
+            onClick={() => toast(`${row.name} contact details`)}
+            className="flex w-full items-center gap-3 px-3 py-4 text-left hover:bg-muted/30 sm:gap-4 sm:px-5"
+          >
+            <span
+              className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-xs font-semibold ${row.tone}`}
+            >
+              {row.name
+                .split(" ")
+                .map((word) => word[0])
+                .slice(0, 2)
+                .join("")}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">{row.name}</span>
+              <span className="mt-1 block truncate text-xs text-muted-foreground">{row.email}</span>
+            </span>
+            <span className="hidden min-w-[105px] text-xs text-muted-foreground sm:block">
+              {row.type}
+            </span>
+            <span className="hidden min-w-[160px] text-right text-xs text-muted-foreground md:block">
+              {row.activity}
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center justify-between py-4 text-xs text-muted-foreground">
+        <span>Showing {rows.length} of 38 contacts</span>
+        <Button variant="outline" size="sm" onClick={() => toast("More contacts loaded.")}>
+          Load more
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export function ConvargExperience() {
   const [stage, setStage] = useState<"auth" | "setup" | "workspace">("auth");
   const [savedStep, setSavedStep] = useState(0);
-  return <div className="convarg-app min-h-screen"><div className="preview-ribbon flex min-h-[34px] items-center justify-center gap-2 bg-primary px-4 text-[11px] text-primary-foreground"><Sparkles className="h-3.5 w-3.5"/><span>Convarg Wave 1 preview</span><span className="opacity-75">· sample workspace</span></div>{stage === "auth" && <AuthScreen onComplete={() => setStage("setup")}/ >}{stage === "setup" && <SetupWizard onFinish={() => setStage("workspace")} onSave={setSavedStep}/ >}{stage === "workspace" && <Workspace/>}{stage === "auth" && savedStep > 0 && <button className="resume-setup fixed bottom-4 right-4 z-20 flex items-center gap-2 border border-border bg-card px-4 py-3 text-xs font-medium shadow-lg" onClick={() => setStage("setup")}><Sparkles className="h-4 w-4 text-primary"/>Resume setup · {Math.min(savedStep,6)} of 6<ArrowRight className="h-3.5 w-3.5"/></button>}</div>;
+  return (
+    <div className="convarg-app min-h-screen">
+      <div className="preview-ribbon flex min-h-[34px] items-center justify-center gap-2 bg-primary px-4 text-[11px] text-primary-foreground">
+        <Sparkles className="h-3.5 w-3.5" />
+        <span>Convarg Wave 1 preview</span>
+        <span className="opacity-75">· sample workspace</span>
+      </div>
+      {stage === "auth" && (
+        <AuthScreen onComplete={() => setStage("workspace")} onPreview={() => setStage("workspace")} />
+      )}
+      {stage === "setup" && (
+        <SetupWizard onFinish={() => setStage("workspace")} onSave={setSavedStep} />
+      )}
+      {stage === "workspace" && <Workspace />}
+      {stage === "auth" && savedStep > 0 && (
+        <button
+          className="resume-setup fixed bottom-4 right-4 z-20 flex items-center gap-2 border border-border bg-card px-4 py-3 text-xs font-medium shadow-lg"
+          onClick={() => setStage("setup")}
+        >
+          <Sparkles className="h-4 w-4 text-primary" />
+          Resume setup · {Math.min(savedStep, 6)} of 6<ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
 }
