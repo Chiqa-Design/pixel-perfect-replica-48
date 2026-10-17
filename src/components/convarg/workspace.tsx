@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 type View = "home" | "notifications" | "preferences" | "invoices" | "contacts";
 type AuthView = "signin" | "register" | "forgot" | "verify" | "mfa" | "enrol";
@@ -274,43 +275,67 @@ function AuthScreen({ onComplete }: { onComplete: () => void }) {
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const submit = () => {
-    if (mode === "signin" && (!email.includes("@") || password.length < 6)) {
+  const submit = async () => {
+    if (!email.includes("@") || (mode !== "forgot" && password.length < 6)) {
       toast.error("Enter a valid email and a password with at least 6 characters.");
       return;
     }
-    if (mode === "register" && (!email.includes("@") || password.length < 6)) {
-      toast.error("Add a valid email and a password with at least 6 characters.");
+    if (!supabase) {
+      toast.error("Authentication is not configured for this preview.");
       return;
     }
     if (mode === "signin") {
-      setMode("mfa");
-      return;
-    }
-    if (mode === "register") {
-      setMode("verify");
-      return;
-    }
-    if (mode === "verify") {
-      onComplete();
-      return;
-    }
-    if (mode === "mfa") {
-      if (otp.length !== 6) {
-        toast.error("Enter all six digits to continue.");
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        toast.error(error.message.toLowerCase().includes("email not confirmed")
+          ? "Please confirm your email before signing in."
+          : "Invalid email or password.");
         return;
       }
       onComplete();
       return;
     }
+    if (mode === "register") {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo:
+            import.meta.env["VITE_SUPABASE_REDIRECT_URL"] ??
+            import.meta.env["NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL"] ??
+            `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        toast.error(error.message.toLowerCase().includes("password")
+          ? error.message
+          : "We couldn’t create your account. Check your details and try again.");
+        return;
+      }
+      if (data.session) onComplete();
+      else setMode("verify");
+      return;
+    }
     if (mode === "forgot") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      });
+      if (error) {
+        toast.error("We couldn’t send the reset link. Please try again.");
+        return;
+      }
       toast.success("If there’s an account for this email, a reset link is on its way.");
       setMode("signin");
       return;
     }
-    if (mode === "enrol") {
-      toast.success("Authenticator set up. Recovery codes saved.");
-      onComplete();
+    if (mode === "verify") {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) onComplete();
+      else toast.error("Please confirm your email, then try again.");
+      return;
+    }
+    if (mode === "mfa" || mode === "enrol") {
+      toast.error("Multi-factor authentication is not enabled for this account.");
     }
   };
   const isSignup = mode === "register";
@@ -676,7 +701,8 @@ function SetupWizard({
   const [assembling, setAssembling] = useState(false);
   const [assemblyProgress, setAssemblyProgress] = useState(0);
   const current = setupSteps[step];
-  const toggle = (option: string) =>
+  const toggle = (option: string) => {
+    if (!current) return;
     setSelected((values) => {
       const existing = values[current.key] ?? [];
       return {
@@ -686,6 +712,7 @@ function SetupWizard({
           : [...existing, option],
       };
     });
+  };
   const startAssembly = () => {
     setAssembling(true);
     setAssemblyProgress(8);
