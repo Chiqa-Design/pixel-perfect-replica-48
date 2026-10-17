@@ -269,7 +269,13 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function AuthScreen({ onComplete }: { onComplete: () => void }) {
+function AuthScreen({
+  onComplete,
+  onPreview,
+}: {
+  onComplete: () => void;
+  onPreview: () => void;
+}) {
   const [mode, setMode] = useState<AuthView>("signin");
   useEffect(() => {
     let active = true;
@@ -377,7 +383,7 @@ function AuthScreen({ onComplete }: { onComplete: () => void }) {
               : "Check your inbox.";
   const subhead =
     mode === "signin"
-      ? "Sign in to get back to the work that moves you forward."
+      ? "Sign in to open your workspace. For this prototype, you can also explore the home screen instantly."
       : mode === "register"
         ? "One account for your team, customers and everyday work."
         : mode === "forgot"
@@ -546,6 +552,12 @@ function AuthScreen({ onComplete }: { onComplete: () => void }) {
                       : "Sign in"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
+                {mode === "signin" && (
+                  <Button variant="outline" className="h-10 w-full" onClick={onPreview}>
+                    <Eye className="h-4 w-4" />
+                    Explore the home screen
+                  </Button>
+                )}
                 <div className="relative py-1 text-center text-xs text-muted-foreground">
                   <span className="relative z-10 bg-card px-3">or continue with</span>
                   <span className="absolute left-0 right-0 top-1/2 border-t border-border" />
@@ -1982,7 +1994,9 @@ export function ConvargExperience() {
         <span>Convarg Wave 1 preview</span>
         <span className="opacity-75">· sample workspace</span>
       </div>
-      {stage === "auth" && <AuthScreen onComplete={() => setStage("setup")} />}
+      {stage === "auth" && (
+        <AuthScreen onComplete={() => setStage("workspace")} onPreview={() => setStage("workspace")} />
+      )}
       {stage === "setup" && (
         <SetupWizard onFinish={() => setStage("workspace")} onSave={setSavedStep} />
       )}
