@@ -1477,11 +1477,21 @@ function HomeView({
               <button
                 key={app.title}
                 className="app-shortcut flex items-center gap-3 border-b border-r border-border p-4 text-left transition-colors hover:bg-muted/40"
-                onClick={() =>
-                  app.active
-                    ? toast(`${app.title} is ready to explore.`)
-                    : toast(`${app.title} isn’t in your current plan.`)
-                }
+                onClick={() => {
+                  if (!app.active) {
+                    toast(`${app.title} isn’t in your current plan.`);
+                    return;
+                  }
+                  if (app.title === "VargBooks") {
+                    setView("invoices");
+                    return;
+                  }
+                  if (app.title === "VargCore") {
+                    setView("contacts");
+                    return;
+                  }
+                  toast(`${app.title} is ready to explore.`);
+                }}
               >
                 <span className={`grid h-9 w-9 shrink-0 place-items-center ${app.color}`}>
                   <app.icon className="h-4 w-4" />
