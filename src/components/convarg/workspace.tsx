@@ -553,10 +553,15 @@ function AuthScreen({
                   <ArrowRight className="h-4 w-4" />
                 </Button>
                 {mode === "signin" && (
-                  <Button variant="outline" className="h-10 w-full" onClick={onPreview}>
-                    <Eye className="h-4 w-4" />
-                    Explore the home screen
-                  </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 w-full"
+                  onClick={onPreview}
+                >
+                  <Eye className="h-4 w-4" />
+                  Explore the home screen
+                </Button>
                 )}
                 <div className="relative py-1 text-center text-xs text-muted-foreground">
                   <span className="relative z-10 bg-card px-3">or continue with</span>
