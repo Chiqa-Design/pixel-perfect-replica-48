@@ -301,6 +301,7 @@ function AuthScreen({
   }, [onComplete]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const submit = async () => {
@@ -1340,6 +1341,13 @@ function HomeView({
   setView: (view: View) => void;
   unreadCount: number;
 }) {
+  const [createMenuOpen, setCreateMenuOpen] = useState(false);
+  const createActions = [
+    { label: "New invoice", detail: "Send a customer invoice", icon: FileText, view: "invoices" as View },
+    { label: "New contact", detail: "Add a person or company", icon: Users, view: "contacts" as View },
+    { label: "Approval request", detail: "Ask a teammate to review", icon: CheckCircle2, view: "home" as View },
+  ];
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -1352,14 +1360,39 @@ function HomeView({
             Here’s what’s happening with your business today.
           </p>
         </div>
-        <Button
-          onClick={() =>
-            toast("Your workspace is ready. Pick an app from the left to get started.")
-          }
-        >
-          <Plus className="h-4 w-4" />
-          Create new
-        </Button>
+        <div className="relative">
+          <Button aria-expanded={createMenuOpen} onClick={() => setCreateMenuOpen((open) => !open)}>
+            <Plus className="h-4 w-4" />
+            Create new
+            <ChevronDown className="h-3.5 w-3.5" />
+          </Button>
+          {createMenuOpen && (
+            <div className="absolute right-0 top-12 z-10 w-64 border border-border bg-card p-1 shadow-lg">
+              {createActions.map((action) => (
+                <button
+                  key={action.label}
+                  className="flex w-full items-center gap-3 p-3 text-left hover:bg-muted/60"
+                  onClick={() => {
+                    setCreateMenuOpen(false);
+                    if (action.label === "Approval request") {
+                      toast.success("Approval request started. Choose a teammate next.");
+                      return;
+                    }
+                    setView(action.view);
+                  }}
+                >
+                  <span className="grid h-8 w-8 place-items-center bg-primary/10 text-primary">
+                    <action.icon className="h-4 w-4" />
+                  </span>
+                  <span>
+                    <span className="block text-xs font-semibold">{action.label}</span>
+                    <span className="block text-[11px] text-muted-foreground">{action.detail}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <section className="next-steps flex flex-col justify-between gap-5 border border-primary/20 bg-primary/[0.035] p-5 sm:flex-row sm:items-center sm:p-6">
         <div className="flex gap-4">
